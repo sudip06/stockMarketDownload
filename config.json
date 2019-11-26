@@ -1,0 +1,26 @@
+{
+  "last_date_updated": "27-Sep-2019",
+  "to_date": "14-Nov-2019",
+  "base_directory": "C:\\sudip",
+  "Include_Weekend": 0,
+  "Nse": {
+    "CsvPath": "http://nseindia.com/content/historical/EQUITIES/",
+    "MtoPath": "http://nseindia.com/archives/equities/mto/",
+    "IndexPath": "https://www.nseindia.com/products/content/equities/indices/historical_index_data.htm",
+    "zipped": 1
+  },
+  "Bse": {
+    "EESPath": "/data4/fapevents/INT/ees",
+    "HostName": "CMTCDE6U104.rd.corpintra.net",
+    "SortFormat": "FileName",
+    "login_id": "srirsri",
+    "password": "J9N971Aw25303Vh7XQ3ggLs=",
+    "ExpectedMaxDelay": "2",
+    "StatusFileName": "fap_status.txt",
+    "TableName": "dc_fapinterface",
+    "zipped": 1
+  },
+  "Holiday": {
+    "2019": "4-Mar-19, 21-Mar-19, 17-Apr-19, 19-Apr-19, 29-Apr-19, 1-May-19, 5-Jun-19, 12-Aug-19, 15-Aug-19, 2-Sep-19, 10-Sep-19, 2-Oct-19, 8-Oct-19, 21-Oct-19, 28-Oct-19, 12-Nov-19, 25-Dec-19"
+  }
+}

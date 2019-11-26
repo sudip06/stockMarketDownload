@@ -1,0 +1,8 @@
+PyQt5
+dateutil
+datetime
+json
+requests
+zipfile
+time
+selenium
