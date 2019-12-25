@@ -1,4 +1,3 @@
-### check if saving directory contans / at last or not
 from datetime import *
 from dateutil.parser import parse
 import json
@@ -18,7 +17,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
-
+from copy import deepcopy
 
 class Download:
     last_date_updated = 0
@@ -31,6 +30,7 @@ class Download:
     DownloadFolder = {}
     nse_zipped = True
     bse_zipped = True
+    headless = True
     adv_dec_file_writer = ""
 
     def __create_directory(self, base_directory):
@@ -62,7 +62,7 @@ class Download:
             os.mkdir(os.path.join(self.nse_root_directory, "RawData"))
             os.mkdir(os.path.join(self.nse_root_directory, "RawData", "DelivData"))
             os.mkdir(os.path.join(self.nse_root_directory, "RawData", "EquityData"))
-            os.mkdir(os.path.join(self.nse_root_directory, "RawData", "NiftyData"))
+            os.mkdir(os.path.join(self.nse_root_directory, "RawData", "IndexData"))
         if not os.path.isdir(os.path.join(self.bse_root_directory, "RawData")):
             os.mkdir(os.path.join(self.bse_root_directory, "RawData"))
             os.mkdir(os.path.join(self.bse_root_directory, "RawData", "DelivData"))
@@ -77,7 +77,8 @@ class Download:
             holiday_str[i] = holiday_list_mod
 
     @staticmethod
-    def __read_config_file(nse_zipped, bse_zipped, include_weekend, saving_directory):
+    def __read_config_file(nse_zipped, bse_zipped, include_weekend,
+                           saving_directory, headless, only_today, indices_source):
         with open("config.json") as f:
             config = json.load(f)
             Download.last_date_updated = parse(config['last_date_updated']).date()
@@ -87,9 +88,12 @@ class Download:
             Download.Include_Weekend = include_weekend
             Download.nse_zipped = nse_zipped
             Download.bse_zipped = bse_zipped
+            Download.headless = headless
+            Download.only_today = only_today
             Download.Holidays = config['Holiday']
             Download.NseDetails = config['Nse']
             Download.BseDetails = config['Bse']
+            Download.indices_source = indices_source
 
     @staticmethod
     def is_weekend_holiday(date1):
@@ -103,64 +107,150 @@ class Download:
         else:
             return False
 
-    def download_nifty(self, date1, date2):
+    @staticmethod
+    def start_firefox(headless):
+        options = Options()
+        if headless:
+            options.add_argument('-headless')
+        binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
+        # driver = Firefox(firefox_binary=binary, executable_path="D:\\Downloads\\geckodriver.exe")
+        if os.name == 'nt':
+            driver = Firefox(firefox_binary=binary, options=options,
+                             executable_path="D:\\Downloads\\geckodriver.exe")
+        else:
+            driver = Firefox(firefox_binary=binary, options=options,
+                             executable_path="/home/sudip/geckodriver/geckodriver")
+        driver.set_page_load_timeout(20)
+        return driver
+
+    def download_index(self, date1, date2):
         exact_dates = list(date1+timedelta(days=x) for x in range(0, ((date2-date1).days+1)))
         if all(Download.is_weekend_holiday(x) for x in exact_dates):
             return
         from_date = date1
-
-        options = Options()
-        options.add_argument('-headless')
-        binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
-        # driver = Firefox(firefox_binary=binary, executable_path="D:\\Downloads\\geckodriver.exe")
-        if os.name == 'nt':
-            driver = Firefox(firefox_binary=binary, options=options, executable_path="D:\\Downloads\\geckodriver.exe")
+        driver = Download.start_firefox(Download.headless)
+        driver.set_page_load_timeout(40)
+        #driver.manage().timeouts().pageLoadTimeout(40, TimeUnit.SECONDS);
+        if Download.indices_source == "Nse":
+            indexes = [x.strip() for x in Download.NseDetails["IndexList"].split(",")]
         else:
-            driver = Firefox(firefox_binary=binary, options=options, executable_path="/home/sudip/geckodriver/geckodriver")
+            index = [x.strip() for x in Download.NseDetails["MoneyControlIndex"].split(",")]
+            indexes = list(map(lambda x: x.split(":")[2], index))
+            index_names = list(map(lambda x: x.split(":")[0], index))
 
-        # driver.get('https://www.nseindia.com/products/content/equities/indices/historical_index_data.htm')
-        driver.get(Download.NseDetails["IndexPath"])
-        timeout = 10
-        for i in range(5):
-            try:
-                element_present = ec.presence_of_element_located((By.ID, 'indexType'))
-                WebDriverWait(driver, timeout).until(element_present)
-                break
-            except TimeoutException:
-                print("Timed out waiting for page to load")
-                if i == 4:
-                    sys.exit(1)
-                continue
-        Select(driver.find_element_by_id("indexType")).select_by_value("NIFTY 50")
-        driver.find_element_by_id("fromDate").send_keys(from_date.strftime('%d-%m-%Y'))
-        driver.find_element_by_id("toDate").send_keys(date2.strftime('%d-%m-%Y'))
-        driver.find_element_by_xpath("//input[@src='/common/images/btn-get-data.gif']").click()
+        if Download.indices_source == "Nse":
+            # driver.get('https://www.nseindia.com/products/content/equities/indices/historical_index_data.htm')
+            for individualElements in indexes:
+                try:
+                    driver.get(Download.NseDetails["IndexPath"])
+                    timeout = 20
+                    for i in range(5):
+                        try:
+                            element_present = ec.presence_of_element_located((By.ID, 'indexType'))
+                            WebDriverWait(driver, timeout).until(element_present)
+                            break
+                        except TimeoutException:
+                            print("Timed out waiting for page to load")
+                            if i == 4:
+                                sys.exit(1)
+                            continue
+                    Select(driver.find_element_by_id("indexType")).select_by_value(individualElements)
+                    driver.find_element_by_id("fromDate").send_keys(from_date.strftime('%d-%m-%Y'))
+                    driver.find_element_by_id("toDate").send_keys(date2.strftime('%d-%m-%Y'))
+                    driver.find_element_by_xpath("//input[@src='/common/images/btn-get-data.gif']").click()
 
-        timeout = 10
-        for i in range(5):
-            try:
-                element_present = ec.presence_of_element_located((By.ID, 'csvContentDiv'))
-                WebDriverWait(driver, timeout).until(element_present)
+                    timeout = 20
+                    for i in range(5):
+                        try:
+                            element_present = ec.presence_of_element_located((By.ID, 'csvContentDiv'))
+                            WebDriverWait(driver, timeout).until(element_present)
+                            break
 
-            except TimeoutException:
-                print("Timed out waiting for page to load")
-                if i == 4:
-                    sys.exit(1)
-                continue
+                        except TimeoutException:
+                            print("Timed out waiting for page to load")
+                            if i == 4:
+                                sys.exit(1)
+                            continue
 
-        all_dates = driver.find_elements_by_xpath('//td[@class="date"]')
-        for every_date in all_dates:
-            numbers = every_date.find_elements_by_xpath('.//following-sibling::td[@class="number"]')
-            # form the nifty file as S&P CNX NIFTY01-11-2019-01-11-2019
-            with open(os.path.join(
-                  self.nse_root_directory,
-                  "S&P CNX NIFTY" + parse(every_date.text).date().
-                  strftime("%d-%m-%Y-%d-%m-%Y")+".csv"), "w") as nifty_file:
-                nifty_file.write("Date        Open         High         Low        Close\n")
-                nifty_file.write(parse(every_date.text).date().strftime("%d-%m-%Y") + "," + numbers[0].text + ","
-                                 + numbers[1].text + "," + numbers[2].text + "," + numbers[3].text+"\n")
+                    all_dates = driver.find_elements_by_xpath('//td[@class="date"]')
+                    for every_date in all_dates:
+                        numbers = every_date.find_elements_by_xpath('.//following-sibling::td[@class="number"]')
+                        # form the nifty file as S&P CNX NIFTY01-11-2019-01-11-2019
+                        with open(os.path.join(
+                              self.nse_root_directory,
+                              individualElements.replace(" ", "_") + "-" + parse(every_date.text).date().
+                              strftime("%d-%m-%Y-%d-%m-%Y")+".csv"), "w") as index_file:
+                            index_file.write("Date        Open         High         Low        Close\n")
+                            index_file.write(parse(every_date.text).date().
+                                             strftime("%d-%m-%Y") + "," +
+                                             numbers[0].text + "," + numbers[1].text +
+                                             "," + numbers[2].text + "," +
+                                             numbers[3].text+"\n")
 
-        driver.quit()
+                    time.sleep(5)
+
+                except TimeoutException:
+                    driver.quit()
+                    driver = Download.start_firefox()
+                    continue
+            driver.quit()
+        else:
+            for idx, individualElements in enumerate(indexes):
+                driver.get(Download.NseDetails["MoneycontrolIndexPath"])
+                timeout = 40
+                for i in range(5):
+                    try:
+                        element_present = ec.presence_of_element_located((By.ID, 'hdn_historic_data'))
+                        WebDriverWait(driver, timeout).until(element_present)
+                        break
+                    except TimeoutException:
+                        print("Timed out waiting for page to load")
+                        if i == 4:
+                            sys.exit(1)
+                        continue
+                driver.find_element_by_id('wutabs2').click()
+                if date1 == date2:
+                    date2 = date2 + timedelta(days=1)
+
+                Select(driver.find_element_by_id("indian_indices")).select_by_value(individualElements)
+                Select(driver.find_element_by_xpath(
+                    "//form[@name='frm_dly']/div[@class='PT4']/select[@name='frm_dy']")).\
+                    select_by_value(str(date1.day))
+                Select(driver.find_element_by_xpath(
+                    "//form[@name='frm_dly']/div[@class='PT4']/select[@name='frm_mth']")).\
+                    select_by_value(str(date1.month))
+                Select(driver.find_element_by_xpath(
+                    "//form[@name='frm_dly']/div[@class='PT4']/select[@name='frm_yr']")). \
+                    select_by_value(str(date1.year))
+
+                Select(driver.find_element_by_xpath(
+                    "//form[@name='frm_dly']/div[@class='PT4']/select[@name='to_dy']")). \
+                    select_by_value(str(date2.day))
+                Select(driver.find_element_by_xpath(
+                    "//form[@name='frm_dly']/div[@class='PT4']/select[@name='to_mth']")). \
+                    select_by_value(str(date2.month))
+                Select(driver.find_element_by_xpath(
+                    "//form[@name='frm_dly']/div[@class='PT4']/select[@name='to_yr']")). \
+                    select_by_value(str(date2.year))
+                driver.find_element_by_xpath("//input[@src='http://img1.moneycontrol.com/images/histstock/go_btn.gif']").click()
+
+                table = driver.find_element_by_xpath("//table[@class='tblchart']")
+                for row in table.find_elements_by_xpath(".//tr"):
+                    value = [td.text for td in row.find_elements_by_xpath(".//td")]
+                    if len(value):
+                        every_date =datetime.strptime(value[0], "%Y-%m-%d")
+
+                        with open(os.path.join(
+                            self.nse_root_directory,
+                            index_names[idx].replace(" ", "_") + "-" + every_date.
+                                    strftime("%d-%m-%Y-%d-%m-%Y") + ".csv"), "w") as index_file:
+                            index_file.write("Date        Open         High         Low        Close\n")
+                            index_file.write(every_date.strftime("%d-%m-%Y") + "," +
+                                             value[1] + "," + value[2] +
+                                             "," + value[3] + "," +
+                                             value[4] + "\n")
+                time.sleep(5)
+            driver.quit()
 
     def process_nse_data(self, date1):
         only_csv_file_name = "cm" + date1.strftime('%d%b%Y').upper() + "bhav.csv"
@@ -183,13 +273,12 @@ class Download:
         with open(mto_file_name) as mtoFileReader:
             mto_file_data = mtoFileReader.read()
 
-        nifty_file_name = os.path.join(self.nse_root_directory, "S&P CNX NIFTY" + date1.strftime("%d-%m-%Y-%d-%m-%Y")
-                                       + ".csv")
-        only_nifty_file_name = "S&P CNX NIFTY" + date1.strftime("%d-%m-%Y-%d-%m-%Y") + ".csv"
-
-        with open(nifty_file_name) as niftyFileReader:
-            next(niftyFileReader)
-            nifty_file_data = niftyFileReader.read().strip().split(',')
+        if Download.indices_source=="Nse":
+            indexes = [x.strip() for x in Download.NseDetails["IndexList"].split(",")]
+        else:
+            index = [x.strip() for x in Download.NseDetails["MoneyControlIndex"].split(",")]
+            indexes = list(map(lambda x: x.split(":")[0], index))
+        # driver.get('https://www.nseindia.com/products/content/equities/indices/historical_index_data.htm')
 
         # Read the 1st junk line in csv file
         with open(csv_file_name) as csvFileReader:
@@ -230,14 +319,31 @@ class Download:
                         + stock_csv_data[2] + "," + stock_csv_data[3] + "," + stock_csv_data[4]
                         + "," + stock_csv_data[5] + "," + stock_csv_data[11] + ",0" + "\n")
 
-            csv_del_file_writer.write(
-                        "NIFTY" + "," + date1.strftime('%Y%m%d') + ","
-                        + nifty_file_data[1] + "," + nifty_file_data[2] + "," + nifty_file_data[3]
-                        + "," + nifty_file_data[4] + "," + "0,0")
-            csv_trade_file_writer.write(
-                "NIFTY" + "," + date1.strftime('%Y%m%d') + ","
-                + nifty_file_data[1] + "," + nifty_file_data[2] + "," + nifty_file_data[3]
-                + "," + nifty_file_data[4] + "," + "0,0")
+            for individualElements in indexes:
+                index_file_name = os.path.join(self.nse_root_directory,
+                                               individualElements.replace(" ", "_") + "-" +
+                                               date1.strftime("%d-%m-%Y-%d-%m-%Y")
+                                               + ".csv")
+                only_index_file_name = individualElements.replace(" ", "_") + "-" + \
+                                        date1.strftime("%d-%m-%Y-%d-%m-%Y") + \
+                                        ".csv"
+
+                with open(index_file_name) as indexFileReader:
+                    next(indexFileReader)
+                    index_file_data = indexFileReader.read().strip().split(',')
+
+                if "NIFTY_50" in only_index_file_name:
+                    nifty_file_data = deepcopy(index_file_data)
+
+                csv_del_file_writer.write(
+                    individualElements.replace(" ", "_") + "," + date1.strftime('%Y%m%d') + ","
+                    + index_file_data[1] + "," + index_file_data[2] + "," + index_file_data[3]
+                    + "," + index_file_data[4] + "," + "0,0" + "\n")
+
+                csv_trade_file_writer.write(
+                    individualElements.replace(" ", "_") + "," + date1.strftime('%Y%m%d') + ","
+                    + index_file_data[1] + "," + index_file_data[2] + "," + index_file_data[3]
+                    + "," + index_file_data[4] + "," + "0,0" + "\n")
 
         Download.adv_dec_file_writer.write(
             date1.strftime('%d/%m/%Y') + "\t"
@@ -254,10 +360,19 @@ class Download:
         os.replace(mto_file_name, os.path.join(
                         self.nse_root_directory,
                         "RawData", "DelivData", only_mto_file_name))
-        os.replace(nifty_file_name, os.path.join(
-                        self.nse_root_directory,
-                        "RawData", "NiftyData", only_nifty_file_name))
+        for individualElements in indexes:
+            index_file_name = os.path.join(self.nse_root_directory,
+                                           individualElements.replace(" ", "_") + "-" +
+                                           date1.strftime("%d-%m-%Y-%d-%m-%Y")
+                                           + ".csv")
 
+            only_index_file_name = individualElements.replace(" ", "_") + "-" + \
+                                   date1.strftime("%d-%m-%Y-%d-%m-%Y") + \
+                                   ".csv"
+
+            os.replace(index_file_name, os.path.join(
+                        self.nse_root_directory,
+                        "RawData", "IndexData", only_index_file_name))
 
     def download_nse(self, date1):
         # csv_net_path = "http://nseindia.com/content/historical/EQUITIES/"
@@ -289,7 +404,6 @@ class Download:
             except requests.exceptions.Timeout:
                 failure_count += 1
                 time.sleep(0.3)
-                print("sudip:failed to get the file")
                 continue
         if failure_count == 3:
             print("Unable to download equity file for {}".format(date1))
@@ -326,7 +440,7 @@ class Download:
 
         # from_date = datetime.strptime(parse(from_date), "%d-%b-%Y")
         # to_date = datetime.strptime(parse(to_date), "%d-%b-%Y")
-        self.download_nifty(from_date, to_date)
+        self.download_index(from_date, to_date)
 
         for every_date in range(0, (to_date - from_date).days+1):
             exact_date = (from_date + timedelta(days=every_date))
@@ -348,8 +462,10 @@ class Download:
         Download.adv_dec_file_writer.close()
 
     def __init__(self, nse_zipped=True, bse_zipped=True, include_weekend=False,
-                 saving_directory=""):
-        Download.__read_config_file(nse_zipped, bse_zipped, include_weekend, saving_directory)
+                 saving_directory="", headless=False, only_today=False,
+                 indices_source="Nse"):
+        Download.__read_config_file(nse_zipped, bse_zipped, include_weekend,
+                                    saving_directory, headless, only_today, indices_source)
         Download.__get_holiday_list(Download.Holidays)
         self.__create_directory(Download.base_directory)
 

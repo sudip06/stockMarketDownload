@@ -36,12 +36,20 @@ class Ui_Dialog(object):
         self.nse_zipped.setGeometry(QtCore.QRect(80, 240, 81, 17))
         self.nse_zipped.setObjectName("nse_zipped")
 
+        self.headless = QtWidgets.QCheckBox(Dialog)
+        self.headless.setGeometry(QtCore.QRect(80, 260, 70, 17))
+        self.headless.setObjectName("headless")
+
+        self.only_today = QtWidgets.QCheckBox(Dialog)
+        self.only_today.setGeometry(QtCore.QRect(470, 260, 81, 17))
+        self.headless.setObjectName("only_today")
+
         self.bse_zipped = QtWidgets.QCheckBox(Dialog)
         self.bse_zipped.setGeometry(QtCore.QRect(470, 240, 81, 16))
         self.bse_zipped.setObjectName("bse_zipped")
 
         self.include_weekend = QtWidgets.QCheckBox(Dialog)
-        self.include_weekend.setGeometry(QtCore.QRect(260, 260, 131, 17))
+        self.include_weekend.setGeometry(QtCore.QRect(260, 240, 131, 17))
         self.include_weekend.setObjectName("include_weekend")
 
         self.label = QtWidgets.QLabel(Dialog)
@@ -81,6 +89,12 @@ class Ui_Dialog(object):
         self.selected_folder_path.setGeometry(QtCore.QRect(92, 310, 191, 31))
         self.selected_folder_path.setObjectName("selected_folder_path")
 
+        self.IndicesSource = QtWidgets.QComboBox(Dialog)
+        self.IndicesSource.setGeometry(QtCore.QRect(260, 266, 90, 20))
+        self.IndicesSource.setObjectName("IndicesSource")
+        self.IndicesSource.addItem("")
+        self.IndicesSource.addItem("")
+
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
@@ -98,6 +112,7 @@ class Ui_Dialog(object):
         if not self.fileDialog.exec_():
             return
         Ui_Dialog.dir = self.fileDialog.selectedFiles()[0]
+        self.selected_folder_path.clear()
         self.selected_folder_path.insertPlainText(Ui_Dialog.dir)
         Ui_Dialog.my_settings.setValue("save_folder_path", Ui_Dialog.dir)
 
@@ -105,6 +120,8 @@ class Ui_Dialog(object):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.nse_zipped.setText(_translate("Dialog", " Nse zipped?"))
+        self.headless.setText(_translate("Dialog", " Headless?"))
+        self.only_today.setText(_translate("Dialog", " Only Today?"))
         self.bse_zipped.setText(_translate("Dialog", "Bse Zipped?"))
         self.include_weekend.setText(_translate("Dialog", "Include Weekend"))
         self.label.setText(_translate("Dialog", "From"))
@@ -112,6 +129,8 @@ class Ui_Dialog(object):
         self.Submit.setText(_translate("Dialog", "Submit"))
         self.select_folder.setText(_translate("Dialog", "Folder"))
         self.label_3.setText(_translate("Dialog", "Select Folder"))
+        self.IndicesSource.setItemText(0, _translate("Dialog", "Nse"))
+        self.IndicesSource.setItemText(1, _translate("Dialog", "Moneycontrol"))
 
     def from_show_date(self, date1):
         self.from_date_label.setText(date1.toString())
@@ -139,6 +158,7 @@ class Ui_Dialog(object):
         self.nse_zipped.setEnabled(value)
         self.bse_zipped.setEnabled(value)
         self.include_weekend.setEnabled(value)
+        self.IndicesSource.setEnabled(value)
 
         self.Submit.repaint()
         self.select_folder.repaint()
@@ -148,6 +168,7 @@ class Ui_Dialog(object):
         self.nse_zipped.repaint()
         self.bse_zipped.repaint()
         self.include_weekend.repaint()
+        self.IndicesSource.repaint()
 
     def check_for_invalid_data(self):
         complete = True
@@ -169,11 +190,17 @@ class Ui_Dialog(object):
         Ui_Dialog.my_settings.setValue("nse_zipped", int(self.nse_zipped.isChecked()))
         Ui_Dialog.my_settings.setValue("bse_zipped", int(self.bse_zipped.isChecked()))
         Ui_Dialog.my_settings.setValue("include_weekend", int(self.include_weekend.isChecked()))
+        Ui_Dialog.my_settings.setValue("headless", int(self.headless.isChecked()))
+        Ui_Dialog.my_settings.setValue("only_today", int(self.only_today.isChecked()))
         Ui_Dialog.my_settings.sync()
 
         d = Download(self.nse_zipped.isChecked(), self.nse_zipped.isChecked(),
-                     self.include_weekend.isChecked(), self.selected_folder_path.toPlainText())
+                     self.include_weekend.isChecked(), self.selected_folder_path.toPlainText(),
+                     self.headless.isChecked(), self.only_today.isChecked(),
+                     str(self.IndicesSource.currentText()))
+
         d.download_data(parse(self.from_date_label.text()).date(), parse(self.to_date_label.text()).date())
+
         self.disable_widgets_during_process(True)
 
     def load_settings(self):
@@ -189,6 +216,9 @@ class Ui_Dialog(object):
             #self.nse_zipped.(Ui_Dialog.my_settings.value("nse_zipped"))
             self.bse_zipped.setChecked(int(Ui_Dialog.my_settings.value("bse_zipped")))
             self.include_weekend.setChecked(int(Ui_Dialog.my_settings.value("include_weekend")))
+
+            self.headless.setChecked(int(Ui_Dialog.my_settings.value("headless")))
+            self.only_today.setChecked(int(Ui_Dialog.my_settings.value("only_today")))
 
 
 if __name__ == "__main__":
