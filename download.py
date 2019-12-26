@@ -112,7 +112,11 @@ class Download:
         options = Options()
         if headless:
             options.add_argument('-headless')
-        binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
+        if os.name == 'nt':
+            binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
+        else:
+            binary = FirefoxBinary(r'/usr/bin/firefox')
+            
         # driver = Firefox(firefox_binary=binary, executable_path="D:\\Downloads\\geckodriver.exe")
         if os.name == 'nt':
             driver = Firefox(firefox_binary=binary, options=options,
