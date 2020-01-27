@@ -159,6 +159,8 @@ class Ui_Dialog(object):
         self.bse_zipped.setEnabled(value)
         self.include_weekend.setEnabled(value)
         self.IndicesSource.setEnabled(value)
+        self.headless.setEnabled(value)
+        self.only_today.setEnabled(value)
 
         self.Submit.repaint()
         self.select_folder.repaint()
@@ -169,6 +171,8 @@ class Ui_Dialog(object):
         self.bse_zipped.repaint()
         self.include_weekend.repaint()
         self.IndicesSource.repaint()
+        self.headless.repaint()
+        self.only_today.repaint()
 
     def check_for_invalid_data(self):
         complete = True
@@ -192,6 +196,7 @@ class Ui_Dialog(object):
         Ui_Dialog.my_settings.setValue("include_weekend", int(self.include_weekend.isChecked()))
         Ui_Dialog.my_settings.setValue("headless", int(self.headless.isChecked()))
         Ui_Dialog.my_settings.setValue("only_today", int(self.only_today.isChecked()))
+        Ui_Dialog.my_settings.setValue("indices_source", int(self.IndicesSource.currentIndex()))
         Ui_Dialog.my_settings.sync()
 
         d = Download(self.nse_zipped.isChecked(), self.nse_zipped.isChecked(),
@@ -213,12 +218,12 @@ class Ui_Dialog(object):
 
             self.nse_zipped.setChecked(int(Ui_Dialog.my_settings.value("nse_zipped")))
 
-            #self.nse_zipped.(Ui_Dialog.my_settings.value("nse_zipped"))
             self.bse_zipped.setChecked(int(Ui_Dialog.my_settings.value("bse_zipped")))
             self.include_weekend.setChecked(int(Ui_Dialog.my_settings.value("include_weekend")))
 
             self.headless.setChecked(int(Ui_Dialog.my_settings.value("headless")))
             self.only_today.setChecked(int(Ui_Dialog.my_settings.value("only_today")))
+            self.IndicesSource.setCurrentIndex(int(Ui_Dialog.my_settings.value("indices_source")))
 
 
 if __name__ == "__main__":

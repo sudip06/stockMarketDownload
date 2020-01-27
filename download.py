@@ -112,15 +112,11 @@ class Download:
         options = Options()
         if headless:
             options.add_argument('-headless')
-        if os.name == 'nt':
-            binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
-        else:
-            binary = FirefoxBinary(r'/usr/bin/firefox')
-            
-        # driver = Firefox(firefox_binary=binary, executable_path="D:\\Downloads\\geckodriver.exe")
+        binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
+
         if os.name == 'nt':
             driver = Firefox(firefox_binary=binary, options=options,
-                             executable_path="D:\\Downloads\\geckodriver.exe")
+                             executable_path="geckodriver.exe")
         else:
             driver = Firefox(firefox_binary=binary, options=options,
                              executable_path="/home/sudip/geckodriver/geckodriver")
@@ -133,7 +129,7 @@ class Download:
             return
         from_date = date1
         driver = Download.start_firefox(Download.headless)
-        driver.set_page_load_timeout(40)
+        driver.set_page_load_timeout(60000)
         #driver.manage().timeouts().pageLoadTimeout(40, TimeUnit.SECONDS);
         if Download.indices_source == "Nse":
             indexes = [x.strip() for x in Download.NseDetails["IndexList"].split(",")]
@@ -147,7 +143,7 @@ class Download:
             for individualElements in indexes:
                 try:
                     driver.get(Download.NseDetails["IndexPath"])
-                    timeout = 20
+                    timeout = 60
                     for i in range(5):
                         try:
                             element_present = ec.presence_of_element_located((By.ID, 'indexType'))
@@ -201,7 +197,7 @@ class Download:
         else:
             for idx, individualElements in enumerate(indexes):
                 driver.get(Download.NseDetails["MoneycontrolIndexPath"])
-                timeout = 40
+                timeout = 60
                 for i in range(5):
                     try:
                         element_present = ec.presence_of_element_located((By.ID, 'hdn_historic_data'))
@@ -219,20 +215,20 @@ class Download:
                 Select(driver.find_element_by_id("indian_indices")).select_by_value(individualElements)
                 Select(driver.find_element_by_xpath(
                     "//form[@name='frm_dly']/div[@class='PT4']/select[@name='frm_dy']")).\
-                    select_by_value(str(date1.day))
+                    select_by_value(str('{:02d}'.format(date1.day)))
                 Select(driver.find_element_by_xpath(
                     "//form[@name='frm_dly']/div[@class='PT4']/select[@name='frm_mth']")).\
-                    select_by_value(str(date1.month))
+                    select_by_value(str('{:02d}'.format(date1.month)))
                 Select(driver.find_element_by_xpath(
                     "//form[@name='frm_dly']/div[@class='PT4']/select[@name='frm_yr']")). \
                     select_by_value(str(date1.year))
 
                 Select(driver.find_element_by_xpath(
                     "//form[@name='frm_dly']/div[@class='PT4']/select[@name='to_dy']")). \
-                    select_by_value(str(date2.day))
+                    select_by_value(str('{:02d}'.format(date2.day)))
                 Select(driver.find_element_by_xpath(
                     "//form[@name='frm_dly']/div[@class='PT4']/select[@name='to_mth']")). \
-                    select_by_value(str(date2.month))
+                    select_by_value(str('{:02d}'.format(date2.month)))
                 Select(driver.find_element_by_xpath(
                     "//form[@name='frm_dly']/div[@class='PT4']/select[@name='to_yr']")). \
                     select_by_value(str(date2.year))
