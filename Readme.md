@@ -6,3 +6,12 @@ This software uses selenium to download stock market data from NSE website. Some
 
 Download of BSE data is restricted and only NSE data is being downloaded as of now.
 
+!["Application photo"](images/application.jpg "Application pic")
+
+
+
+!["Snapshot 1"](images/snapshot1.jpg "Snapshot1")
+
+
+
+!["Snapshot 2"](images/snapshot2.jpg "Snapshot2")
