@@ -18,6 +18,10 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from copy import deepcopy
+import sqlalchemy
+from models import Base, StockData, AdvDec
+from sqlalchemy.orm import sessionmaker
+
 
 class Download:
     last_date_updated = 0
@@ -32,6 +36,7 @@ class Download:
     bse_zipped = True
     headless = True
     adv_dec_file_writer = ""
+
 
     def __create_directory(self, base_directory):
         self.nse_root_directory = os.path.join(base_directory, "Nse")
@@ -112,12 +117,13 @@ class Download:
         options = Options()
         if headless:
             options.add_argument('-headless')
-        binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
 
         if os.name == 'nt':
+            binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
             driver = Firefox(firefox_binary=binary, options=options,
                              executable_path="geckodriver.exe")
         else:
+            binary = FirefoxBinary(r'/usr/bin/firefox')
             driver = Firefox(firefox_binary=binary, options=options,
                              executable_path="/home/sudip/geckodriver/geckodriver")
         driver.set_page_load_timeout(20)
@@ -232,7 +238,8 @@ class Download:
                 Select(driver.find_element_by_xpath(
                     "//form[@name='frm_dly']/div[@class='PT4']/select[@name='to_yr']")). \
                     select_by_value(str(date2.year))
-                driver.find_element_by_xpath("//input[@src='http://img1.moneycontrol.com/images/histstock/go_btn.gif']").click()
+                # driver.find_element_by_xpath("//input[@src='http://img1.moneycontrol.com/images/histstock/go_btn.gif']").click()
+                driver.find_element_by_xpath("//input[@src='https://images.moneycontrol.com/images/histstock/go_btn.gif']").click()
 
                 table = driver.find_element_by_xpath("//table[@class='tblchart']")
                 for row in table.find_elements_by_xpath(".//tr"):
@@ -280,6 +287,8 @@ class Download:
             indexes = list(map(lambda x: x.split(":")[0], index))
         # driver.get('https://www.nseindia.com/products/content/equities/indices/historical_index_data.htm')
 
+        session = sessionmaker(bind=self.engine)
+        sess = session()
         # Read the 1st junk line in csv file
         with open(csv_file_name) as csvFileReader:
             # write the 1st line in csvFileTemp file
@@ -302,22 +311,24 @@ class Download:
                 stock_data_regex = re.compile(stock_name + ",EQ,\d*,\d*")
                 mto_data_filtered = re.search(stock_data_regex, mto_file_data, 0)
                 if not mto_data_filtered:
-                    csv_del_file_writer.write(stock_name + "," + date1.strftime('%Y%m%d')
-                                              + "," + stock_csv_data[2] + "," + stock_csv_data[3]
-                                              + "," + stock_csv_data[4] + "," + stock_csv_data[5]
-                                              + "," + str(int(stock_csv_data[8])*0.4)+",0" + "\n")
+                    del_volume = str(int(int(stock_csv_data[8])*0.4))
                 else:
                     mto_text = mto_data_filtered.group(0).split(',')
-
-                    csv_del_file_writer.write(
-                        stock_name + "," + date1.strftime('%Y%m%d') + ","
-                        + stock_csv_data[2]+"," + stock_csv_data[3] + "," + stock_csv_data[4]
-                        + "," + stock_csv_data[5] + "," + mto_text[3] + ",0" + "\n")
-
-                    csv_trade_file_writer.write(
+                    del_volume = str(mto_text[3])
+                csv_del_file_writer.write(stock_name + "," + date1.strftime('%Y%m%d')
+                                            + "," + stock_csv_data[2] + "," + stock_csv_data[3]
+                                            + "," + stock_csv_data[4] + "," + stock_csv_data[5]
+                                            + "," + del_volume +",0" + "\n")
+                csv_trade_file_writer.write(
                         stock_name + "," + date1.strftime('%Y%m%d') + ","
                         + stock_csv_data[2] + "," + stock_csv_data[3] + "," + stock_csv_data[4]
                         + "," + stock_csv_data[5] + "," + stock_csv_data[11] + ",0" + "\n")
+
+                stock_obj = StockData(stock_name=stock_name, date=date1,
+                                       open=stock_csv_data[2], high=stock_csv_data[3],
+                                       low=stock_csv_data[4], close=stock_csv_data[5],
+                                       del_volume=del_volume, trade_volume=stock_csv_data[11])
+                sess.add(stock_obj)
 
             for individualElements in indexes:
                 index_file_name = os.path.join(self.nse_root_directory,
@@ -332,6 +343,13 @@ class Download:
                     next(indexFileReader)
                     index_file_data = indexFileReader.read().strip().split(',')
 
+                stock_obj = StockData(stock_name=individualElements.replace(" ", "_"),
+                                      date=date1, open=index_file_data[1],
+                                      high=index_file_data[2], low=index_file_data[3],
+                                      close=index_file_data[4], del_volume=0,
+                                      trade_volume=0)
+                sess.add(stock_obj)
+
                 if "NIFTY_50" in only_index_file_name:
                     nifty_file_data = deepcopy(index_file_data)
 
@@ -344,6 +362,11 @@ class Download:
                     individualElements.replace(" ", "_") + "," + date1.strftime('%Y%m%d') + ","
                     + index_file_data[1] + "," + index_file_data[2] + "," + index_file_data[3]
                     + "," + index_file_data[4] + "," + "0,0" + "\n")
+
+        adv_dec_obj = AdvDec(date=date1, advance=advance_num, decline=decline_num)
+        sess.add(adv_dec_obj)
+        sess.commit()
+        sess.close()
 
         Download.adv_dec_file_writer.write(
             date1.strftime('%d/%m/%Y') + "\t"
@@ -468,6 +491,8 @@ class Download:
                                     saving_directory, headless, only_today, indices_source)
         Download.__get_holiday_list(Download.Holidays)
         self.__create_directory(Download.base_directory)
+        self.engine = sqlalchemy.create_engine('postgresql://postgres:docker@localhost:5432/stock_data', echo=True)
+        Base.metadata.create_all(self.engine)
 
 '''
 d = Download()
