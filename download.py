@@ -264,6 +264,8 @@ class Download:
         only_mto_file_name = "MTO_" + date1.strftime('%d%m%Y') + ".DAT"
         advance_num = 0
         decline_num = 0
+        stock_obj_list = []
+        stock_index_obj_list = []
         csv_file_name = os.path.join(self.nse_root_directory, only_csv_file_name)
         csv_del_file_name = os.path.join(self.nse_root_directory, "ModifiedCSV", "DeliveryVolume",
                                          only_csv_file_name)
@@ -276,6 +278,13 @@ class Download:
         csv_del_file_writer.AutoFlush = True
         csv_trade_file_writer.AutoFlush = True
 
+        session = sessionmaker(bind=self.engine)
+        sess = session()
+        if sess.query(StockData).filter(StockData.date==date1).count()==0:
+            data_to_be_inserted_to_db = True
+        else:
+            data_to_be_inserted_to_db = False 
+        
         # open mto file
         with open(mto_file_name) as mtoFileReader:
             mto_file_data = mtoFileReader.read()
@@ -287,8 +296,6 @@ class Download:
             indexes = list(map(lambda x: x.split(":")[0], index))
         # driver.get('https://www.nseindia.com/products/content/equities/indices/historical_index_data.htm')
 
-        session = sessionmaker(bind=self.engine)
-        sess = session()
         # Read the 1st junk line in csv file
         with open(csv_file_name) as csvFileReader:
             # write the 1st line in csvFileTemp file
@@ -324,11 +331,13 @@ class Download:
                         + stock_csv_data[2] + "," + stock_csv_data[3] + "," + stock_csv_data[4]
                         + "," + stock_csv_data[5] + "," + stock_csv_data[11] + ",0" + "\n")
 
-                stock_obj = StockData(stock_name=stock_name, date=date1,
-                                       open=stock_csv_data[2], high=stock_csv_data[3],
-                                       low=stock_csv_data[4], close=stock_csv_data[5],
-                                       del_volume=del_volume, trade_volume=stock_csv_data[11])
-                sess.add(stock_obj)
+                if data_to_be_inserted_to_db:
+                    stock_obj = StockData(stock_name=stock_name, date=date1,
+                                          open=stock_csv_data[2], high=stock_csv_data[3],
+                                          low=stock_csv_data[4], close=stock_csv_data[5],
+                                          del_volume=del_volume, trade_volume=stock_csv_data[11])
+                    stock_obj_list.append(stock_obj)
+                    # sess.add(stock_obj)
 
             for individualElements in indexes:
                 index_file_name = os.path.join(self.nse_root_directory,
@@ -339,16 +348,20 @@ class Download:
                                         date1.strftime("%d-%m-%Y-%d-%m-%Y") + \
                                         ".csv"
 
+                if not os.path.exists(index_file_name):
+                    continue
+
                 with open(index_file_name) as indexFileReader:
                     next(indexFileReader)
                     index_file_data = indexFileReader.read().strip().split(',')
-
-                stock_obj = StockData(stock_name=individualElements.replace(" ", "_"),
-                                      date=date1, open=index_file_data[1],
-                                      high=index_file_data[2], low=index_file_data[3],
-                                      close=index_file_data[4], del_volume=0,
-                                      trade_volume=0)
-                sess.add(stock_obj)
+                if data_to_be_inserted_to_db:
+                    stock_index_obj = StockData(stock_name=individualElements.replace(" ", "_"),
+                                          date=date1, open=index_file_data[1],
+                                          high=index_file_data[2], low=index_file_data[3],
+                                          close=index_file_data[4], del_volume=0,
+                                          trade_volume=0)
+                    #sess.add(stock_obj)
+                    stock_obj_list.append(stock_index_obj)
 
                 if "NIFTY_50" in only_index_file_name:
                     nifty_file_data = deepcopy(index_file_data)
@@ -363,8 +376,13 @@ class Download:
                     + index_file_data[1] + "," + index_file_data[2] + "," + index_file_data[3]
                     + "," + index_file_data[4] + "," + "0,0" + "\n")
 
-        adv_dec_obj = AdvDec(date=date1, advance=advance_num, decline=decline_num)
-        sess.add(adv_dec_obj)
+        sess.bulk_save_objects(stock_obj_list)
+        # find if the entry already exist
+        data_in_adv_dec=sess.query(AdvDec).filter(AdvDec.date==date1).count()
+        if data_in_adv_dec==0:
+        #if sess.query(AdvDec).filter(AdvDec.date==date1).count()==0:
+            adv_dec_obj = AdvDec(date=date1, advance=advance_num, decline=decline_num)
+            sess.add(adv_dec_obj)
         sess.commit()
         sess.close()
 
@@ -491,7 +509,7 @@ class Download:
                                     saving_directory, headless, only_today, indices_source)
         Download.__get_holiday_list(Download.Holidays)
         self.__create_directory(Download.base_directory)
-        self.engine = sqlalchemy.create_engine('postgresql://postgres:docker@localhost:5432/stock_data', echo=True)
+        self.engine = sqlalchemy.create_engine('postgresql://postgres:docker@localhost:5432/stock_data', echo=False)
         Base.metadata.create_all(self.engine)
 
 '''
