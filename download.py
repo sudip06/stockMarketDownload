@@ -9,7 +9,8 @@ import sys
 from operator import itemgetter
 import re
 
-from selenium.webdriver import Firefox
+from selenium import webdriver
+from selenium.webdriver import Firefox, Chrome
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.firefox.options import Options
@@ -123,9 +124,20 @@ class Download:
             driver = Firefox(firefox_binary=binary, options=options,
                              executable_path="geckodriver.exe")
         else:
-            binary = FirefoxBinary(r'/usr/bin/firefox')
-            driver = Firefox(firefox_binary=binary, options=options,
-                             executable_path="/home/sudip/geckodriver/geckodriver")
+            #binary = FirefoxBinary(r'/usr/bin/firefox')
+            options = webdriver.ChromeOptions()
+            options.add_argument("--disable-blink-features")
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            driver = Chrome(options=options, executable_path="/home/sudip/geckodriver/chromedriver")
+            # driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            #    "source": """
+            #    Object.defineProperty(navigator, 'webdriver', {
+            #      get: () => undefined
+            #    })
+            #  """
+            # })
+            # driver = Firefox(firefox_binary=binary, options=options,
+            #                 executable_path="/home/sudip/geckodriver/geckodriver")
         driver.set_page_load_timeout(20)
         return driver
 
@@ -145,26 +157,28 @@ class Download:
             index_names = list(map(lambda x: x.split(":")[0], index))
 
         if Download.indices_source == "Nse":
+            driver.get(Download.NseDetails["IndexPath"])
+            timeout = 60
+            for i in range(5):
+                try:
+                    element_present = ec.presence_of_element_located((By.ID, 'indexType'))
+                    WebDriverWait(driver, timeout).until(element_present)
+                    time.sleep(5)
+                    driver.find_element_by_id("fromDate").send_keys(from_date.strftime('%d-%m-%Y'))
+                    time.sleep(2)
+                    driver.find_element_by_id("toDate").send_keys(date2.strftime('%d-%m-%Y'))
+                    break
+                except TimeoutException:
+                    print("Timed out waiting for page to load")
+                    if i == 4:
+                        sys.exit(1)
+                    continue
             # driver.get('https://www.nseindia.com/products/content/equities/indices/historical_index_data.htm')
             for individualElements in indexes:
                 try:
-                    driver.get(Download.NseDetails["IndexPath"])
-                    timeout = 60
-                    for i in range(5):
-                        try:
-                            element_present = ec.presence_of_element_located((By.ID, 'indexType'))
-                            WebDriverWait(driver, timeout).until(element_present)
-                            break
-                        except TimeoutException:
-                            print("Timed out waiting for page to load")
-                            if i == 4:
-                                sys.exit(1)
-                            continue
                     Select(driver.find_element_by_id("indexType")).select_by_value(individualElements)
-                    driver.find_element_by_id("fromDate").send_keys(from_date.strftime('%d-%m-%Y'))
-                    driver.find_element_by_id("toDate").send_keys(date2.strftime('%d-%m-%Y'))
+                    time.sleep(5)
                     driver.find_element_by_xpath("//input[@src='/common/images/btn-get-data.gif']").click()
-
                     timeout = 20
                     for i in range(5):
                         try:
@@ -376,13 +390,18 @@ class Download:
                     + index_file_data[1] + "," + index_file_data[2] + "," + index_file_data[3]
                     + "," + index_file_data[4] + "," + "0,0" + "\n")
 
-        sess.bulk_save_objects(stock_obj_list)
+        # before the stockdata was added belo, moving down because its giving no key present in adv_dec table,
+        # might be because we are adding it below. hence moving it below the adv_dec add code.
+        # sess.bulk_save_objects(stock_obj_list)
         # find if the entry already exist
         data_in_adv_dec=sess.query(AdvDec).filter(AdvDec.date==date1).count()
         if data_in_adv_dec==0:
         #if sess.query(AdvDec).filter(AdvDec.date==date1).count()==0:
             adv_dec_obj = AdvDec(date=date1, advance=advance_num, decline=decline_num)
             sess.add(adv_dec_obj)
+            sess.commit()
+
+        sess.bulk_save_objects(stock_obj_list)
         sess.commit()
         sess.close()
 
