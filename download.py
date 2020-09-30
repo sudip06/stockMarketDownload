@@ -217,7 +217,7 @@ class Download:
         else:
             for idx, individualElements in enumerate(indexes):
                 driver.get(Download.NseDetails["MoneycontrolIndexPath"])
-                timeout = 60
+                timeout = 120
                 for i in range(5):
                     try:
                         element_present = ec.presence_of_element_located((By.ID, 'hdn_historic_data'))
@@ -254,6 +254,8 @@ class Download:
                     select_by_value(str(date2.year))
                 # driver.find_element_by_xpath("//input[@src='http://img1.moneycontrol.com/images/histstock/go_btn.gif']").click()
                 driver.find_element_by_xpath("//input[@src='https://images.moneycontrol.com/images/histstock/go_btn.gif']").click()
+
+                WebDriverWait(driver, 20).until(ec.presence_of_element_located((By.XPATH, "//table[@class='tblchart']")))
 
                 table = driver.find_element_by_xpath("//table[@class='tblchart']")
                 for row in table.find_elements_by_xpath(".//tr"):

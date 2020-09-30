@@ -17,8 +17,8 @@ class StockData(Base):
     """ Data model for stock data insertion """
     __tablename__ = "stock_data"
     stock_name = Column("stock_name", String(100), primary_key=True, 
-                        nullable=False)
-    date = Column("date", Date, ForeignKey(AdvDec.date), primary_key=True, nullable=False)
+                        nullable=False, index=True)
+    date = Column("date", Date, ForeignKey(AdvDec.date), nullable=False, index=True)
     open = Column("open", Float, nullable=False)
     high = Column("high", Float, nullable=False)
     low = Column("low", Float, nullable=False)
