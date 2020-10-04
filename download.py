@@ -120,9 +120,13 @@ class Download:
             options.add_argument('-headless')
 
         if os.name == 'nt':
-            binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
-            driver = Firefox(firefox_binary=binary, options=options,
-                             executable_path="geckodriver.exe")
+            # binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
+            # driver = Firefox(firefox_binary=binary, options=options,
+            #                 executable_path="geckodriver.exe")
+            options = webdriver.ChromeOptions()
+            options.add_argument("--disable-blink-features")
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            driver = Chrome(options=options, executable_path=r'chromedriver.exe')
         else:
             #binary = FirefoxBinary(r'/usr/bin/firefox')
             options = webdriver.ChromeOptions()

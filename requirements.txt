@@ -1,8 +1,10 @@
 PyQt5
 dateutil
 datetime
-json
+simplejson
 requests
 zipfile
 time
 selenium
+python-dateutil
+psycopg2-binary
