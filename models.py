@@ -16,7 +16,11 @@ class AdvDec(Base):
 class StockData(Base):
     """ Data model for stock data insertion """
     __tablename__ = "stock_data"
-    stock_name = Column("stock_name", String(100), primary_key=True, 
+    id = Column(Integer,
+                primary_key=True,
+                nullable=False,
+                autoincrement=True)
+    stock_name = Column("stock_name", String(100),
                         nullable=False, index=True)
     date = Column("date", Date, ForeignKey(AdvDec.date), nullable=False, index=True)
     open = Column("open", Float, nullable=False)

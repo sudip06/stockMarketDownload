@@ -84,7 +84,8 @@ class Download:
 
     @staticmethod
     def __read_config_file(nse_zipped, bse_zipped, include_weekend,
-                           saving_directory, headless, only_today, indices_source):
+                           saving_directory, headless, only_today,
+                           dont_download_bhavcopy, indices_source):
         with open("config.json") as f:
             config = json.load(f)
             Download.last_date_updated = parse(config['last_date_updated']).date()
@@ -96,6 +97,7 @@ class Download:
             Download.bse_zipped = bse_zipped
             Download.headless = headless
             Download.only_today = only_today
+            Download.dont_download_bhavcopy = dont_download_bhavcopy
             Download.Holidays = config['Holiday']
             Download.NseDetails = config['Nse']
             Download.BseDetails = config['Bse']
@@ -115,21 +117,20 @@ class Download:
 
     @staticmethod
     def start_firefox(headless):
-        options = Options()
+        options = webdriver.ChromeOptions()
+        #options = Options()
         if headless:
-            options.add_argument('-headless')
+            options.add_argument('--headless')
 
         if os.name == 'nt':
             # binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
             # driver = Firefox(firefox_binary=binary, options=options,
             #                 executable_path="geckodriver.exe")
-            options = webdriver.ChromeOptions()
             options.add_argument("--disable-blink-features")
             options.add_argument("--disable-blink-features=AutomationControlled")
             driver = Chrome(options=options, executable_path=r'chromedriver.exe')
         else:
             #binary = FirefoxBinary(r'/usr/bin/firefox')
-            options = webdriver.ChromeOptions()
             options.add_argument("--disable-blink-features")
             options.add_argument("--disable-blink-features=AutomationControlled")
             driver = Chrome(options=options, executable_path="/home/sudip/geckodriver/chromedriver")
@@ -349,13 +350,13 @@ class Download:
                 csv_trade_file_writer.write(
                         stock_name + "," + date1.strftime('%Y%m%d') + ","
                         + stock_csv_data[2] + "," + stock_csv_data[3] + "," + stock_csv_data[4]
-                        + "," + stock_csv_data[5] + "," + stock_csv_data[11] + ",0" + "\n")
+                        + "," + stock_csv_data[5] + "," + stock_csv_data[8] + ",0" + "\n")
 
                 if data_to_be_inserted_to_db:
                     stock_obj = StockData(stock_name=stock_name, date=date1,
                                           open=stock_csv_data[2], high=stock_csv_data[3],
                                           low=stock_csv_data[4], close=stock_csv_data[5],
-                                          del_volume=del_volume, trade_volume=stock_csv_data[11])
+                                          del_volume=del_volume, trade_volume=stock_csv_data[8])
                     stock_obj_list.append(stock_obj)
                     # sess.add(stock_obj)
 
@@ -396,7 +397,7 @@ class Download:
                     + index_file_data[1] + "," + index_file_data[2] + "," + index_file_data[3]
                     + "," + index_file_data[4] + "," + "0,0" + "\n")
 
-        # before the stockdata was added belo, moving down because its giving no key present in adv_dec table,
+        # before the stockdata was added below, moving down because its giving no key present in adv_dec table,
         # might be because we are adding it below. hence moving it below the adv_dec add code.
         # sess.bulk_save_objects(stock_obj_list)
         # find if the entry already exist
@@ -435,10 +436,12 @@ class Download:
             only_index_file_name = individualElements.replace(" ", "_") + "-" + \
                                    date1.strftime("%d-%m-%Y-%d-%m-%Y") + \
                                    ".csv"
-
-            os.replace(index_file_name, os.path.join(
-                        self.nse_root_directory,
-                        "RawData", "IndexData", only_index_file_name))
+            try:
+                os.replace(index_file_name, os.path.join(
+                           self.nse_root_directory,
+                           "RawData", "IndexData", only_index_file_name))
+            except Exception as e:
+                print(f'''Probably couldn't find {only_index_file_name}:{e}''')
 
     def download_nse(self, date1):
         # csv_net_path = "http://nseindia.com/content/historical/EQUITIES/"
@@ -453,27 +456,31 @@ class Download:
 
         failure_count = 0
 
-        for tryCount in range(3):
-            try:
-                response = requests.get(csv_net_path)
-                local_file = os.path.join(self.nse_root_directory, csv_file_name)
-                open(local_file, 'wb').write(response.content)
-                if Download.nse_zipped and os.path.getsize(local_file) > 5000:
-                    try:
-                        z = zipfile.ZipFile(local_file)
-                        z.extractall(path=self.nse_root_directory)
-                        z.close()
-                    except Exception as e:
-                        print("Error unzipping file {}, error:{}".format(local_file, e))
-                    os.remove(local_file)
-
-            except requests.exceptions.Timeout:
-                failure_count += 1
-                time.sleep(0.3)
-                continue
-        if failure_count == 3:
-            print("Unable to download equity file for {}".format(date1))
-            return 1
+        if not Download.dont_download_bhavcopy:
+            for tryCount in range(3):
+                fail_to_unzip=0
+                try:
+                    response = requests.get(csv_net_path)
+                    local_file = os.path.join(self.nse_root_directory, csv_file_name)
+                    open(local_file, 'wb').write(response.content)
+                    if Download.nse_zipped and os.path.getsize(local_file) > 5000:
+                        try:
+                            z = zipfile.ZipFile(local_file)
+                            z.extractall(path=self.nse_root_directory)
+                            z.close()
+                            os.remove(local_file)
+                            break
+                        except Exception as e:
+                            fail_to_unzip = 1
+                            print("Error unzipping file {}, error:{}".format(local_file, e))
+                        os.remove(local_file)
+                except requests.exceptions.Timeout:
+                    failure_count += 1
+                    time.sleep(0.3)
+                    continue
+            if failure_count == 3 or fail_to_unzip == 1:
+                print("Unable to download equity or unzip file for {}".format(date1))
+                return 1
 
         failure_count = 0
 
@@ -484,7 +491,7 @@ class Download:
                 response = requests.get(mto_net_path)
                 local_file = os.path.join(self.nse_root_directory, mto_file_name)
                 open(local_file, 'wb').write(response.content)
-
+                break
             except requests.exceptions.Timeout:
                 failure_count += 1
                 time.sleep(0.3)
@@ -529,9 +536,10 @@ class Download:
 
     def __init__(self, nse_zipped=True, bse_zipped=True, include_weekend=False,
                  saving_directory="", headless=False, only_today=False,
-                 indices_source="Nse"):
+                 dont_download_bhavcopy=False, indices_source="Nse"):
         Download.__read_config_file(nse_zipped, bse_zipped, include_weekend,
-                                    saving_directory, headless, only_today, indices_source)
+                                    saving_directory, headless, only_today,
+                                    dont_download_bhavcopy, indices_source)
         Download.__get_holiday_list(Download.Holidays)
         self.__create_directory(Download.base_directory)
         self.engine = sqlalchemy.create_engine('postgresql://postgres:docker@localhost:5432/stock_data', echo=False)

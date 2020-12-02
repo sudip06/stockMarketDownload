@@ -22,13 +22,13 @@ class Ui_Dialog(object):
         Dialog.setObjectName("Dialog")
         Dialog.resize(649, 463)
         self.from_date = QtWidgets.QCalendarWidget(Dialog)
-        self.from_date.setGeometry(QtCore.QRect(30, 40, 256, 183))
-        self.from_date.setMinimumSize(QtCore.QSize(256, 183))
+        self.from_date.setGeometry(QtCore.QRect(30, 40, 310, 183))
+        self.from_date.setMinimumSize(QtCore.QSize(310, 183))
         self.from_date.setObjectName("from_date")
         self.from_date.clicked[QDate].connect(self.from_show_date)
 
         self.to_date = QtWidgets.QCalendarWidget(Dialog)
-        self.to_date.setGeometry(QtCore.QRect(310, 40, 256, 183))
+        self.to_date.setGeometry(QtCore.QRect(350, 40, 310, 183))
         self.to_date.setObjectName("to_date")
         self.to_date.clicked[QDate].connect(self.to_show_date)
 
@@ -44,6 +44,10 @@ class Ui_Dialog(object):
         self.only_today.setGeometry(QtCore.QRect(470, 260, 81, 17))
         self.headless.setObjectName("only_today")
 
+        self.dont_download_bhavcopy = QtWidgets.QCheckBox(Dialog)
+        self.dont_download_bhavcopy.setGeometry(QtCore.QRect(260, 260, 180, 17))
+        self.dont_download_bhavcopy.setObjectName("dont_download_bhavcopy")
+
         self.bse_zipped = QtWidgets.QCheckBox(Dialog)
         self.bse_zipped.setGeometry(QtCore.QRect(470, 240, 81, 16))
         self.bse_zipped.setObjectName("bse_zipped")
@@ -57,7 +61,7 @@ class Ui_Dialog(object):
         self.label.setObjectName("label")
 
         self.label_2 = QtWidgets.QLabel(Dialog)
-        self.label_2.setGeometry(QtCore.QRect(310, 12, 47, 21))
+        self.label_2.setGeometry(QtCore.QRect(350, 12, 47, 21))
         self.label_2.setObjectName("label_2")
 
         self.Submit = QtWidgets.QPushButton(Dialog)
@@ -71,7 +75,7 @@ class Ui_Dialog(object):
         self.from_date_label.setObjectName("from_date_label")
 
         self.to_date_label = QtWidgets.QLabel(Dialog)
-        self.to_date_label.setGeometry(QtCore.QRect(340, 12, 151, 21))
+        self.to_date_label.setGeometry(QtCore.QRect(380, 12, 151, 21))
         self.to_date_label.setText("")
         self.to_date_label.setObjectName("to_date_label")
 
@@ -90,7 +94,7 @@ class Ui_Dialog(object):
         self.selected_folder_path.setObjectName("selected_folder_path")
 
         self.IndicesSource = QtWidgets.QComboBox(Dialog)
-        self.IndicesSource.setGeometry(QtCore.QRect(260, 266, 90, 20))
+        self.IndicesSource.setGeometry(QtCore.QRect(260, 280, 90, 20))
         self.IndicesSource.setObjectName("IndicesSource")
         self.IndicesSource.addItem("")
         self.IndicesSource.addItem("")
@@ -122,6 +126,7 @@ class Ui_Dialog(object):
         self.nse_zipped.setText(_translate("Dialog", " Nse zipped?"))
         self.headless.setText(_translate("Dialog", " Headless?"))
         self.only_today.setText(_translate("Dialog", " Only Today?"))
+        self.dont_download_bhavcopy.setText(_translate("Dialog", " Don't download bhavcopy"))
         self.bse_zipped.setText(_translate("Dialog", "Bse Zipped?"))
         self.include_weekend.setText(_translate("Dialog", "Include Weekend"))
         self.label.setText(_translate("Dialog", "From"))
@@ -161,6 +166,7 @@ class Ui_Dialog(object):
         self.IndicesSource.setEnabled(value)
         self.headless.setEnabled(value)
         self.only_today.setEnabled(value)
+        self.dont_download_bhavcopy.setEnabled(value)
 
         self.Submit.repaint()
         self.select_folder.repaint()
@@ -173,6 +179,7 @@ class Ui_Dialog(object):
         self.IndicesSource.repaint()
         self.headless.repaint()
         self.only_today.repaint()
+        self.dont_download_bhavcopy.repaint()
 
     def check_for_invalid_data(self):
         complete = True
@@ -195,6 +202,7 @@ class Ui_Dialog(object):
         Ui_Dialog.my_settings.setValue("bse_zipped", int(self.bse_zipped.isChecked()))
         Ui_Dialog.my_settings.setValue("include_weekend", int(self.include_weekend.isChecked()))
         Ui_Dialog.my_settings.setValue("headless", int(self.headless.isChecked()))
+        Ui_Dialog.my_settings.setValue("dont_download_bhavcopy", int(self.dont_download_bhavcopy.isChecked()))
         Ui_Dialog.my_settings.setValue("only_today", int(self.only_today.isChecked()))
         Ui_Dialog.my_settings.setValue("indices_source", int(self.IndicesSource.currentIndex()))
         Ui_Dialog.my_settings.sync()
@@ -202,6 +210,7 @@ class Ui_Dialog(object):
         d = Download(self.nse_zipped.isChecked(), self.nse_zipped.isChecked(),
                      self.include_weekend.isChecked(), self.selected_folder_path.toPlainText(),
                      self.headless.isChecked(), self.only_today.isChecked(),
+                     self.dont_download_bhavcopy.isChecked(),
                      str(self.IndicesSource.currentText()))
 
         d.download_data(parse(self.from_date_label.text()).date(), parse(self.to_date_label.text()).date())
@@ -222,6 +231,7 @@ class Ui_Dialog(object):
             self.include_weekend.setChecked(int(Ui_Dialog.my_settings.value("include_weekend")))
 
             self.headless.setChecked(int(Ui_Dialog.my_settings.value("headless")))
+            self.dont_download_bhavcopy.setChecked(int(Ui_Dialog.my_settings.value("dont_download_bhavcopy")))
             self.only_today.setChecked(int(Ui_Dialog.my_settings.value("only_today")))
             self.IndicesSource.setCurrentIndex(int(Ui_Dialog.my_settings.value("indices_source")))
 
