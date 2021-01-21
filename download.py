@@ -84,8 +84,8 @@ class Download:
 
     @staticmethod
     def __read_config_file(nse_zipped, bse_zipped, include_weekend,
-                           saving_directory, headless, only_today,
-                           dont_download_bhavcopy, indices_source):
+                           saving_directory, headless, dont_download_indices,
+                           only_today, dont_download_bhavcopy, indices_source):
         with open("config.json") as f:
             config = json.load(f)
             Download.last_date_updated = parse(config['last_date_updated']).date()
@@ -96,6 +96,7 @@ class Download:
             Download.nse_zipped = nse_zipped
             Download.bse_zipped = bse_zipped
             Download.headless = headless
+            Download.dont_download_indices = dont_download_indices
             Download.only_today = only_today
             Download.dont_download_bhavcopy = dont_download_bhavcopy
             Download.Holidays = config['Holiday']
@@ -456,28 +457,28 @@ class Download:
 
         failure_count = 0
 
-        if not Download.dont_download_bhavcopy:
-            for tryCount in range(3):
-                fail_to_unzip=0
-                try:
+        for tryCount in range(3):
+            fail_to_unzip=0
+            try:
+                local_file = os.path.join(self.nse_root_directory, csv_file_name)
+                if not Download.dont_download_bhavcopy:
                     response = requests.get(csv_net_path)
-                    local_file = os.path.join(self.nse_root_directory, csv_file_name)
                     open(local_file, 'wb').write(response.content)
-                    if Download.nse_zipped and os.path.getsize(local_file) > 5000:
-                        try:
-                            z = zipfile.ZipFile(local_file)
-                            z.extractall(path=self.nse_root_directory)
-                            z.close()
-                            os.remove(local_file)
-                            break
-                        except Exception as e:
-                            fail_to_unzip = 1
-                            print("Error unzipping file {}, error:{}".format(local_file, e))
+                if Download.nse_zipped and os.path.getsize(local_file) > 5000:
+                    try:
+                        z = zipfile.ZipFile(local_file)
+                        z.extractall(path=self.nse_root_directory)
+                        z.close()
                         os.remove(local_file)
-                except requests.exceptions.Timeout:
-                    failure_count += 1
-                    time.sleep(0.3)
-                    continue
+                        break
+                    except Exception as e:
+                        fail_to_unzip = 1
+                        print("Error unzipping file {}, error:{}".format(local_file, e))
+                    os.remove(local_file)
+            except requests.exceptions.Timeout:
+                failure_count += 1
+                time.sleep(0.3)
+                continue
             if failure_count == 3 or fail_to_unzip == 1:
                 print("Unable to download equity or unzip file for {}".format(date1))
                 return 1
@@ -513,7 +514,8 @@ class Download:
 
         # from_date = datetime.strptime(parse(from_date), "%d-%b-%Y")
         # to_date = datetime.strptime(parse(to_date), "%d-%b-%Y")
-        self.download_index(from_date, to_date)
+        if not Download.dont_download_indices:
+            self.download_index(from_date, to_date)
 
         for every_date in range(0, (to_date - from_date).days+1):
             exact_date = (from_date + timedelta(days=every_date))
@@ -535,11 +537,11 @@ class Download:
         Download.adv_dec_file_writer.close()
 
     def __init__(self, nse_zipped=True, bse_zipped=True, include_weekend=False,
-                 saving_directory="", headless=False, only_today=False,
-                 dont_download_bhavcopy=False, indices_source="Nse"):
+                 saving_directory="", headless=False, dont_download_indices=True,
+                 only_today=False, dont_download_bhavcopy=False, indices_source="Nse"):
         Download.__read_config_file(nse_zipped, bse_zipped, include_weekend,
-                                    saving_directory, headless, only_today,
-                                    dont_download_bhavcopy, indices_source)
+                                    saving_directory, headless, dont_download_indices,
+                                    only_today, dont_download_bhavcopy, indices_source)
         Download.__get_holiday_list(Download.Holidays)
         self.__create_directory(Download.base_directory)
         self.engine = sqlalchemy.create_engine('postgresql://postgres:docker@localhost:5432/stock_data', echo=False)

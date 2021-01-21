@@ -40,9 +40,13 @@ class Ui_Dialog(object):
         self.headless.setGeometry(QtCore.QRect(80, 260, 70, 17))
         self.headless.setObjectName("headless")
 
+        self.dont_download_indices = QtWidgets.QCheckBox(Dialog)
+        self.dont_download_indices.setGeometry(QtCore.QRect(80, 280, 140, 17))
+        self.dont_download_indices.setObjectName("dont_download_indices")
+
         self.only_today = QtWidgets.QCheckBox(Dialog)
         self.only_today.setGeometry(QtCore.QRect(470, 260, 81, 17))
-        self.headless.setObjectName("only_today")
+        self.only_today.setObjectName("only_today")
 
         self.dont_download_bhavcopy = QtWidgets.QCheckBox(Dialog)
         self.dont_download_bhavcopy.setGeometry(QtCore.QRect(260, 260, 180, 17))
@@ -125,6 +129,7 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.nse_zipped.setText(_translate("Dialog", " Nse zipped?"))
         self.headless.setText(_translate("Dialog", " Headless?"))
+        self.dont_download_indices.setText(_translate("Dialog", "Don't download indices"))
         self.only_today.setText(_translate("Dialog", " Only Today?"))
         self.dont_download_bhavcopy.setText(_translate("Dialog", " Don't download bhavcopy"))
         self.bse_zipped.setText(_translate("Dialog", "Bse Zipped?"))
@@ -165,6 +170,7 @@ class Ui_Dialog(object):
         self.include_weekend.setEnabled(value)
         self.IndicesSource.setEnabled(value)
         self.headless.setEnabled(value)
+        self.dont_download_indices.setEnabled(value)
         self.only_today.setEnabled(value)
         self.dont_download_bhavcopy.setEnabled(value)
 
@@ -178,6 +184,7 @@ class Ui_Dialog(object):
         self.include_weekend.repaint()
         self.IndicesSource.repaint()
         self.headless.repaint()
+        self.dont_download_indices.repaint()
         self.only_today.repaint()
         self.dont_download_bhavcopy.repaint()
 
@@ -202,6 +209,7 @@ class Ui_Dialog(object):
         Ui_Dialog.my_settings.setValue("bse_zipped", int(self.bse_zipped.isChecked()))
         Ui_Dialog.my_settings.setValue("include_weekend", int(self.include_weekend.isChecked()))
         Ui_Dialog.my_settings.setValue("headless", int(self.headless.isChecked()))
+        Ui_Dialog.my_settings.setValue("dont_download_indices", int(self.dont_download_indices.isChecked()))
         Ui_Dialog.my_settings.setValue("dont_download_bhavcopy", int(self.dont_download_bhavcopy.isChecked()))
         Ui_Dialog.my_settings.setValue("only_today", int(self.only_today.isChecked()))
         Ui_Dialog.my_settings.setValue("indices_source", int(self.IndicesSource.currentIndex()))
@@ -209,8 +217,8 @@ class Ui_Dialog(object):
 
         d = Download(self.nse_zipped.isChecked(), self.nse_zipped.isChecked(),
                      self.include_weekend.isChecked(), self.selected_folder_path.toPlainText(),
-                     self.headless.isChecked(), self.only_today.isChecked(),
-                     self.dont_download_bhavcopy.isChecked(),
+                     self.headless.isChecked(), self.dont_download_indices.isChecked(),
+                     self.only_today.isChecked(), self.dont_download_bhavcopy.isChecked(),
                      str(self.IndicesSource.currentText()))
 
         d.download_data(parse(self.from_date_label.text()).date(), parse(self.to_date_label.text()).date())
@@ -231,6 +239,7 @@ class Ui_Dialog(object):
             self.include_weekend.setChecked(int(Ui_Dialog.my_settings.value("include_weekend")))
 
             self.headless.setChecked(int(Ui_Dialog.my_settings.value("headless")))
+            self.dont_download_indices.setChecked(int(Ui_Dialog.my_settings.value("dont_download_indices")))
             self.dont_download_bhavcopy.setChecked(int(Ui_Dialog.my_settings.value("dont_download_bhavcopy")))
             self.only_today.setChecked(int(Ui_Dialog.my_settings.value("only_today")))
             self.IndicesSource.setCurrentIndex(int(Ui_Dialog.my_settings.value("indices_source")))
