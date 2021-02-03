@@ -8,6 +8,7 @@
     "MtoPath": "https://www1.nseindia.com/archives/equities/mto/",
     "IndexPath": "https://www1.nseindia.com/products/content/equities/indices/historical_index_data.htm",
     "MoneycontrolIndexPath": "https://www.moneycontrol.com/stocks/histstock.php",
+    "NewCsvPath": "https://www1.nseindia.com/products/content/equities/equities/archieve_eq.htm",
     "IndexList": "NIFTY 50, NIFTY AUTO, NIFTY BANK, NIFTY FIN SERVICE, NIFTY FMCG, NIFTY IT, NIFTY MEDIA, NIFTY METAL, NIFTY PHARMA, NIFTY PVT BANK, NIFTY PSU BANK, NIFTY REALTY",
     "MoneyControlIndex": "NIFTY 50:CNX Nifty:9, NIFTY AUTO:CNX AUTO:52,NIFTY FMCG:CNX FMCG:39,NIFTY IT:CNX IT:19,NIFTY MEDIA:CNX MEDIA:50,NIFTY METAL:CNX METAL:51,NIFTY PHARMA:CNX PHARMA:41,NIFTY PSU BANK:CNX PSU BANK:43",
     "zipped": 1

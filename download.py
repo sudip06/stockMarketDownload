@@ -147,6 +147,53 @@ class Download:
         driver.set_page_load_timeout(20)
         return driver
 
+    def download_csv(self, date1):
+        driver = Download.start_firefox(Download.headless)
+        driver.get(Download.NseDetails["NewCsvPath"])
+
+        for i in range(5):
+            try:
+                element_present = driver.find_element_by_class_name("viewdata-content")
+                timeout = 60
+                #WebDriverWait(driver, timeout).until(element_present)
+                time.sleep(5)
+                Select(driver.find_element_by_id("h_filetype")).select_by_value("eqbhav")
+
+                datepicker = driver.find_element_by_id("date")
+                datepicker.click()
+
+                #selectMonth = driver.find_element_by_xpath('//select[@class="ui-datepicker-month"]')).select_by_value(date1.strftime('%b'))
+                selectMonth = driver.find_element_by_xpath('//select[@class="ui-datepicker-month"]')
+                for option in selectMonth.find_elements_by_tag_name('option'):
+                    if option.text == date1.strftime('%b'):
+                        option.click()
+                        break
+
+                #Select(driver.find_element_by_xpath('//select[@class="ui-datepicker-year"]')).select_by_value(date1.strftime('%Y'))
+                selectYear = driver.find_element_by_xpath('//select[@class="ui-datepicker-year"]')
+                for option in selectYear.find_elements_by_tag_name('option'):
+                    if option.text == date1.strftime('%Y'):
+                        option.click()
+                        break
+
+                days = driver.find_elements_by_xpath('//a[@class="ui-state-default"]')
+                days[int(date1.strftime("%d"))-1].click()
+
+                        #driver.find_element_by_id("date").send_keys(date1.strftime('%d-%m-%Y'))
+                #driver.find_element_by_id("h_filetype").select_by_value("eqbhav")
+                #driver.find_element_by_id("date").send_keys(date1.strftime('%d-%m-%Y'))
+                time.sleep(2)
+                driver.find_element_by_xpath("//input[@src='/common/images/btn-get-data.gif']").click()
+                #print(driver.find_element_by_class_name('spanDisplayBox').text)
+                print('hello world')
+                break
+            except TimeoutException:
+                print("Timed out waiting for page to load")
+                if i == 4:
+                    sys.exit(1)
+                continue
+
+
     def download_index(self, date1, date2):
         exact_dates = list(date1+timedelta(days=x) for x in range(0, ((date2-date1).days+1)))
         if all(Download.is_weekend_holiday(x) for x in exact_dates):
@@ -173,6 +220,7 @@ class Download:
                     driver.find_element_by_id("fromDate").send_keys(from_date.strftime('%d-%m-%Y'))
                     time.sleep(2)
                     driver.find_element_by_id("toDate").send_keys(date2.strftime('%d-%m-%Y'))
+                    driver.find_element_by_xpath("//input[@src='/common/images/btn-get-data.gif']").click()
                     break
                 except TimeoutException:
                     print("Timed out waiting for page to load")
@@ -528,7 +576,8 @@ class Download:
             if exact_date.weekday() >= 5 and Download.Include_Weekend == 0:
                 continue
             else:
-                ret_nse_download = self.download_nse(exact_date)
+                #ret_nse_download = self.download_nse(exact_date)
+                self.download_csv(exact_date)
                 Download.download_bse(exact_date)
 
                 if ret_nse_download == 0:
