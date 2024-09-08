@@ -22,7 +22,7 @@ from copy import deepcopy
 import sqlalchemy
 from models import Base, StockData, AdvDec
 from sqlalchemy.orm import sessionmaker
-
+MTO_NOT_NEEDED = True
 
 class Download:
     last_date_updated = 0
@@ -117,44 +117,30 @@ class Download:
             return False
 
     @staticmethod
-    def start_firefox(headless):
-        options = webdriver.ChromeOptions()
-        #options = Options()
+    def start_chrome(headless):
+        options = Options()
         if headless:
             options.add_argument('--headless')
 
-        if os.name == 'nt':
-            # binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
-            # driver = Firefox(firefox_binary=binary, options=options,
-            #                 executable_path="geckodriver.exe")
-            options.add_argument("--disable-gpu")
-            #options.add_argument("--disable-blink-features")
-            #options.add_argument("--disable-blink-features=AutomationControlled")
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--ignore-certificate-errors")
-            options.add_argument("--ignore-ssl-errors=true")
+        # Common settings for all platforms
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--ignore-certificate-errors")
+        options.add_argument("--ignore-ssl-errors=true")
+        options.add_argument("--no-sandbox")
 
-            #next 4 lines to disable browser CORS checks
+        # Windows-specific settings
+        if os.name == 'nt':
             options.add_argument("--user-data-dir=C:\\chrome-dev-disabled-security-for-cors-stock-market-software")
             options.add_argument("--disable-web-security")
             options.add_argument("--disable-site-isolation-trials")
-            options.add_argument("--no-sandbox")
-
-            driver = Chrome(options=options, executable_path=r'chromedriver.exe')
+            driver = webdriver.Chrome(options=options, executable_path='chromedriver.exe')
         else:
-            #binary = FirefoxBinary(r'/usr/bin/firefox')
+            # Non-Windows (e.g., Linux) specific settings
             options.add_argument("--disable-blink-features")
             options.add_argument("--disable-blink-features=AutomationControlled")
-            driver = Chrome(options=options, executable_path="/home/sudip/geckodriver/chromedriver")
-            # driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-            #    "source": """
-            #    Object.defineProperty(navigator, 'webdriver', {
-            #      get: () => undefined
-            #    })
-            #  """
-            # })
-            # driver = Firefox(firefox_binary=binary, options=options,
-            #                 executable_path="/home/sudip/geckodriver/geckodriver")
+            driver = webdriver.Chrome(options=options, executable_path='/home/sudip/geckodriver/chromedriver')
+
         driver.set_page_load_timeout(20)
         return driver
 
@@ -163,7 +149,7 @@ class Download:
         if all(Download.is_weekend_holiday(x) for x in exact_dates):
             return
         from_date = date1
-        driver = Download.start_firefox(Download.headless)
+        driver = Download.start_chrome(Download.headless)
         driver.set_page_load_timeout(60000)
         #driver.manage().timeouts().pageLoadTimeout(40, TimeUnit.SECONDS);
         if Download.indices_source in ("Nse", "Nsepython"):
@@ -228,7 +214,7 @@ class Download:
 
                 except TimeoutException:
                     driver.quit()
-                    driver = Download.start_firefox()
+                    driver = Download.start_chrome()
                     continue
             driver.quit()
         elif Download.indices_source == "Moneycontrol":
@@ -313,17 +299,19 @@ class Download:
 
     def process_nse_data(self, date1):
         only_csv_file_name = "cm" + date1.strftime('%d%b%Y').upper() + "bhav.csv"
-        only_mto_file_name = "MTO_" + date1.strftime('%d%m%Y') + ".DAT"
+        if not MTO_NOT_NEEDED:
+            only_mto_file_name = "MTO_" + date1.strftime('%d%m%Y') + ".DAT"
         advance_num = 0
         decline_num = 0
         stock_obj_list = []
         stock_index_obj_list = []
-        csv_file_name = os.path.join(self.nse_root_directory, only_csv_file_name)
+        csv_file_name = os.path.join(self.nse_root_directory, "sec_bhavdata_full_" + date1.strftime('%d%m%Y') + ".csv")
         csv_del_file_name = os.path.join(self.nse_root_directory, "ModifiedCSV", "DeliveryVolume",
                                          only_csv_file_name)
         csv_trade_file_name = os.path.join(self.nse_root_directory, "ModifiedCSV", "TradingVolume",
                                            only_csv_file_name)
-        mto_file_name = os.path.join(self.nse_root_directory, only_mto_file_name)
+        if not MTO_NOT_NEEDED:
+            mto_file_name = os.path.join(self.nse_root_directory, only_mto_file_name)
 
         csv_del_file_writer = open(csv_del_file_name, "w")
         csv_trade_file_writer = open(csv_trade_file_name, "w")
@@ -337,9 +325,10 @@ class Download:
         else:
             data_to_be_inserted_to_db = False 
         
-        # open mto file
-        with open(mto_file_name) as mtoFileReader:
-            mto_file_data = mtoFileReader.read()
+        if not MTO_NOT_NEEDED:
+            # open mto file
+            with open(mto_file_name) as mtoFileReader:
+                mto_file_data = mtoFileReader.read()
 
         if Download.indices_source=="Nse":
             indexes = [x.strip() for x in Download.NseDetails["IndexList"].split(",")]
@@ -356,10 +345,10 @@ class Download:
             next(csvFileReader)
             for every_line in csvFileReader:
                 # Trim last character(',')
-                every_line = every_line[:-1]
-                stock_csv_data = every_line.split(',')
-                stock_name, stock_type, close_price, prev_price = itemgetter(0, 1, 5, 7)(every_line.split(','))
-                if stock_type != 'EQ' and stock_type != 'BE':
+                # every_line = every_line[:-1]
+                stock_csv_data = [element.strip() for element in every_line.split(',')]
+                stock_name, stock_type, close_price, prev_price = itemgetter(0, 1, 8, 3)(every_line.split(','))
+                if stock_type not in ('EQ','BE'):
                     continue
 
                 if close_price > prev_price:
@@ -368,26 +357,27 @@ class Download:
                     decline_num += 1
 
                 stock_data_regex = re.compile(stock_name + ",EQ,\d*,\d*")
-                mto_data_filtered = re.search(stock_data_regex, mto_file_data, 0)
-                if not mto_data_filtered:
-                    del_volume = str(int(int(stock_csv_data[8])*0.4))
-                else:
-                    mto_text = mto_data_filtered.group(0).split(',')
-                    del_volume = str(mto_text[3])
+                if not MTO_NOT_NEEDED:
+                    mto_data_filtered = re.search(stock_data_regex, mto_file_data, 0)
+                    if not mto_data_filtered:
+                        del_volume = str(int(int(stock_csv_data[8])*0.4))
+                    else:
+                        mto_text = mto_data_filtered.group(0).split(',')
+                        del_volume = str(mto_text[3])
                 csv_del_file_writer.write(stock_name + "," + date1.strftime('%Y%m%d')
-                                            + "," + stock_csv_data[2] + "," + stock_csv_data[3]
                                             + "," + stock_csv_data[4] + "," + stock_csv_data[5]
-                                            + "," + del_volume +",0" + "\n")
+                                            + "," + stock_csv_data[6] + "," + stock_csv_data[8]
+                                            + "," + stock_csv_data[13] +",0" + "\n")
                 csv_trade_file_writer.write(
                         stock_name + "," + date1.strftime('%Y%m%d') + ","
-                        + stock_csv_data[2] + "," + stock_csv_data[3] + "," + stock_csv_data[4]
-                        + "," + stock_csv_data[5] + "," + stock_csv_data[8] + ",0" + "\n")
+                        + stock_csv_data[4] + "," + stock_csv_data[5] + "," + stock_csv_data[6]
+                        + "," + stock_csv_data[8] + "," + stock_csv_data[10] + ",0" + "\n")
 
                 if data_to_be_inserted_to_db:
                     stock_obj = StockData(stock_name=stock_name, date=date1,
-                                          open=stock_csv_data[2], high=stock_csv_data[3],
-                                          low=stock_csv_data[4], close=stock_csv_data[5],
-                                          del_volume=del_volume, trade_volume=stock_csv_data[8])
+                                          open=stock_csv_data[4], high=stock_csv_data[5],
+                                          low=stock_csv_data[6], close=stock_csv_data[8],
+                                          del_volume=stock_csv_data[13], trade_volume=stock_csv_data[10])
                     stock_obj_list.append(stock_obj)
                     # sess.add(stock_obj)
 
@@ -455,9 +445,10 @@ class Download:
         os.replace(csv_file_name, os.path.join(
                         self.nse_root_directory,
                         "RawData", "EquityData", only_csv_file_name))
-        os.replace(mto_file_name, os.path.join(
-                        self.nse_root_directory,
-                        "RawData", "DelivData", only_mto_file_name))
+        if not MTO_NOT_NEEDED:
+            os.replace(mto_file_name, os.path.join(
+                            self.nse_root_directory,
+                            "RawData", "DelivData", only_mto_file_name))
         for individualElements in indexes:
             index_file_name = os.path.join(self.nse_root_directory,
                                            individualElements.replace(" ", "_") + "-" +
@@ -477,10 +468,12 @@ class Download:
     def download_nse(self, date1):
         # csv_net_path = "http://nseindia.com/content/historical/EQUITIES/"
         csv_net_path = Download.NseDetails["CsvPath"]
-        # mto_net_path = "http://nseindia.com/archives/equities/mto/"
-        mto_net_path = Download.NseDetails["MtoPath"]
-        csv_file_name = "cm" + date1.strftime('%d%b%Y').upper() + "bhav.csv"
-        csv_net_path = csv_net_path + date1.strftime("%Y/%b/").upper()
+        if not MTO_NOT_NEEDED:
+            # mto_net_path = "http://nseindia.com/archives/equities/mto/"
+            mto_net_path = Download.NseDetails["MtoPath"]
+        #csv_file_name = "cm" + date1.strftime('%d%b%Y').upper() + "bhav.csv"
+        csv_file_name = "sec_bhavdata_full_" + date1.strftime('%d%m%Y') + ".csv"
+        #csv_net_path = csv_net_path + csv_file_name
         if Download.nse_zipped:
             csv_file_name = csv_file_name + ".zip"
         csv_net_path = csv_net_path + csv_file_name
@@ -494,7 +487,7 @@ class Download:
                 if not Download.dont_download_bhavcopy:
                     response = requests.get(csv_net_path)
                     open(local_file, 'wb').write(response.content)
-                if Download.nse_zipped and os.path.getsize(local_file) > 5000:
+                elif Download.nse_zipped and (os.path.getsize(local_file) > 5000):
                     try:
                         z = zipfile.ZipFile(local_file)
                         z.extractall(path=self.nse_root_directory)
@@ -514,22 +507,22 @@ class Download:
                 return 1
 
         failure_count = 0
-
-        mto_file_name = "MTO_" + date1.strftime("%d%m%Y") + ".DAT"
-        mto_net_path = mto_net_path + mto_file_name
-        for tryCount in range(3):
-            try:
-                response = requests.get(mto_net_path)
-                local_file = os.path.join(self.nse_root_directory, mto_file_name)
-                open(local_file, 'wb').write(response.content)
-                break
-            except requests.exceptions.Timeout:
-                failure_count += 1
-                time.sleep(0.3)
-                continue
-        if failure_count == 3:
-            print("Unable to download deliverables file for {}".format(date1))
-            return 1
+        if not MTO_NOT_NEEDED:
+            mto_file_name = "MTO_" + date1.strftime("%d%m%Y") + ".DAT"
+            mto_net_path = mto_net_path + mto_file_name
+            for tryCount in range(3):
+                try:
+                    response = requests.get(mto_net_path)
+                    local_file = os.path.join(self.nse_root_directory, mto_file_name)
+                    open(local_file, 'wb').write(response.content)
+                    break
+                except requests.exceptions.Timeout:
+                    failure_count += 1
+                    time.sleep(0.3)
+                    continue
+            if failure_count == 3:
+                print("Unable to download deliverables file for {}".format(date1))
+                return 1
 
         return 0
 
