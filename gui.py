@@ -102,6 +102,7 @@ class Ui_Dialog(object):
         self.IndicesSource.setObjectName("IndicesSource")
         self.IndicesSource.addItem("")
         self.IndicesSource.addItem("")
+        self.IndicesSource.addItem("")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -141,6 +142,7 @@ class Ui_Dialog(object):
         self.label_3.setText(_translate("Dialog", "Select Folder"))
         self.IndicesSource.setItemText(0, _translate("Dialog", "Nse"))
         self.IndicesSource.setItemText(1, _translate("Dialog", "Moneycontrol"))
+        self.IndicesSource.setItemText(2, _translate("Dialog", "Nsepython"))
 
     def from_show_date(self, date1):
         self.from_date_label.setText(date1.toString())

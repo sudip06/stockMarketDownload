@@ -127,8 +127,19 @@ class Download:
             # binary = FirefoxBinary(r'C:\\Program Files\\Mozilla Firefox\\firefox.exe')
             # driver = Firefox(firefox_binary=binary, options=options,
             #                 executable_path="geckodriver.exe")
-            options.add_argument("--disable-blink-features")
-            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument("--disable-gpu")
+            #options.add_argument("--disable-blink-features")
+            #options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--ignore-certificate-errors")
+            options.add_argument("--ignore-ssl-errors=true")
+
+            #next 4 lines to disable browser CORS checks
+            options.add_argument("--user-data-dir=C:\\chrome-dev-disabled-security-for-cors-stock-market-software")
+            options.add_argument("--disable-web-security")
+            options.add_argument("--disable-site-isolation-trials")
+            options.add_argument("--no-sandbox")
+
             driver = Chrome(options=options, executable_path=r'chromedriver.exe')
         else:
             #binary = FirefoxBinary(r'/usr/bin/firefox')
@@ -155,9 +166,9 @@ class Download:
         driver = Download.start_firefox(Download.headless)
         driver.set_page_load_timeout(60000)
         #driver.manage().timeouts().pageLoadTimeout(40, TimeUnit.SECONDS);
-        if Download.indices_source == "Nse":
+        if Download.indices_source in ("Nse", "Nsepython"):
             indexes = [x.strip() for x in Download.NseDetails["IndexList"].split(",")]
-        else:
+        else: #for Moneycontrol
             index = [x.strip() for x in Download.NseDetails["MoneyControlIndex"].split(",")]
             indexes = list(map(lambda x: x.split(":")[2], index))
             index_names = list(map(lambda x: x.split(":")[0], index))
@@ -220,7 +231,7 @@ class Download:
                     driver = Download.start_firefox()
                     continue
             driver.quit()
-        else:
+        elif Download.indices_source == "Moneycontrol":
             for idx, individualElements in enumerate(indexes):
                 driver.get(Download.NseDetails["MoneycontrolIndexPath"])
                 timeout = 120
@@ -280,6 +291,25 @@ class Download:
                                              value[4] + "\n")
                 time.sleep(5)
             driver.quit()
+        else: #Nsepython
+            from_date = date1.strftime('%d-%b-%Y')
+            to_date = date2.strftime('%d-%b-%Y')
+
+            from nsepython import index_history
+            for idx, individualElements in enumerate(indexes):
+                x = index_history(individualElements, from_date, to_date)
+                for i in range(len(x)):
+                    every_date = datetime.strptime(x['HistoricalDate'][i].replace(" ", "-"), "%d-%b-%Y")
+                    with open(os.path.join(
+                                self.nse_root_directory,
+                                individualElements.replace(" ", "_") + "-" + every_date.
+                                        strftime("%d-%m-%Y-%d-%m-%Y") + ".csv"), "w") as index_file:
+                            index_file.write("Date        Open         High         Low        Close\n")
+                            index_file.write(every_date.strftime("%d-%m-%Y") + "," +
+                                             x['OPEN'][i] + "," + x['HIGH'][i] +
+                                             "," + x['LOW'][i] + "," +
+                                             x['CLOSE'][i] + "\n")
+                time.sleep(2)
 
     def process_nse_data(self, date1):
         only_csv_file_name = "cm" + date1.strftime('%d%b%Y').upper() + "bhav.csv"
@@ -538,13 +568,14 @@ class Download:
 
     def __init__(self, nse_zipped=True, bse_zipped=True, include_weekend=False,
                  saving_directory="", headless=False, dont_download_indices=True,
-                 only_today=False, dont_download_bhavcopy=False, indices_source="Nse"):
+                 only_today=False, dont_download_bhavcopy=False, indices_source="Nse", docker_host="127.0.0.1"):
         Download.__read_config_file(nse_zipped, bse_zipped, include_weekend,
                                     saving_directory, headless, dont_download_indices,
                                     only_today, dont_download_bhavcopy, indices_source)
         Download.__get_holiday_list(Download.Holidays)
         self.__create_directory(Download.base_directory)
-        self.engine = sqlalchemy.create_engine('postgresql://postgres:docker@localhost:5432/stock_data', echo=False)
+        #self.engine = sqlalchemy.create_engine('postgresql://postgres:docker@localhost:5432/stock_data', echo=False)
+        self.engine = sqlalchemy.create_engine('postgresql://postgres:docker@127.0.0.1:5432/stock_data', echo=False)
         Base.metadata.create_all(self.engine)
 
 '''
