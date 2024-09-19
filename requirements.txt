@@ -1,10 +1,9 @@
 PyQt5
-dateutil
 datetime
 simplejson
 requests
-zipfile
-time
 selenium
 python-dateutil
 psycopg2-binary
+yfinance
+sqlalchemy

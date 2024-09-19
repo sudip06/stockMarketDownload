@@ -6,7 +6,7 @@
   "Nse": {
     "CsvPath": "https://www1.nseindia.com/content/historical/EQUITIES/",
     "MtoPath": "https://www1.nseindia.com/archives/equities/mto/",
-    "IndexPath": "https://www1.nseindia.com/products/content/equities/indices/historical_index_data.htm",
+    "IndexPath": "https://www.niftyindices.com/reports/historical-data",
     "MoneycontrolIndexPath": "https://www.moneycontrol.com/stocks/histstock.php",
     "IndexList": "NIFTY 50, NIFTY AUTO, NIFTY BANK, NIFTY FIN SERVICE, NIFTY FMCG, NIFTY IT, NIFTY MEDIA, NIFTY METAL, NIFTY PHARMA, NIFTY PVT BANK, NIFTY PSU BANK, NIFTY REALTY",
     "MoneyControlIndex": "NIFTY 50:CNX Nifty:9, NIFTY AUTO:CNX AUTO:52,NIFTY FMCG:CNX FMCG:39,NIFTY IT:CNX IT:19,NIFTY MEDIA:CNX MEDIA:50,NIFTY METAL:CNX METAL:51,NIFTY PHARMA:CNX PHARMA:41,NIFTY PSU BANK:CNX PSU BANK:43",
@@ -22,6 +22,8 @@
     "zipped": 1
   },
   "Holiday": {
+    "2024": "22-Jan-24, 26-Jan-24, 08-Mar-24, 25-Mar-24, 29-Mar-24, 11-Apr-24, 17-Apr-24, 01-May-24, 20-May-24, 17-Jun-24, 17-Jul-24, 15-Aug-24, 02-Oct-24, 01-Nov-24, 15-Nov-24, 25-Dec-24",
+    "2023": "26-Jan-23, 07-Mar-23, 22-Mar-23, 30-Mar-23, 04-Apr-23, 07-Apr-23, 14-Apr-23, 01-May-23, 05-May-23, 29-Jun-23, 15-Aug-23, 16-Aug-23, 19-Sep-23, 28-Sep-23, 02-Oct-23, 24-Oct-23, 14-Nov-23, 27-Nov-23, 25-Dec-23",    
     "2021": "26-Jan-21, 11-Mar-21, 29-Mar-21, 02-Apr-21, 14-Apr-21, 21-Apr-21, 13-May-21, 21-Jul-21, 19-Aug-21, 10-Sep-21, 15-Oct-21, 05-Nov-21, 19-Nov-21",
     "2020": "21-Feb-20, 09-Mar-20, 02-Apr-20, 06-Apr-20, 10-Apr-20, 14-Apr-20, 01-May-20, 25-May-20, 31-Jul-20, 20-Aug-20, 02-Oct-20, 16-Nov-20, 30-Nov-20, 25-Dec-20",
     "2019": "4-Mar-19, 21-Mar-19, 17-Apr-19, 19-Apr-19, 29-Apr-19, 1-May-19, 5-Jun-19, 12-Aug-19, 15-Aug-19, 2-Sep-19, 10-Sep-19, 2-Oct-19, 8-Oct-19, 21-Oct-19, 28-Oct-19, 12-Nov-19, 25-Dec-19",

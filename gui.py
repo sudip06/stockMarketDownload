@@ -1,121 +1,119 @@
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'untitled.ui'
-#
-# Created by: PyQt5 UI code generator 5.9.2
-#
-# WARNING! All changes made in this file will be lost!
-# read boolean value from checkbox
-# test for data saved in correct location
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QDate, QSettings
-from PyQt5.QtWidgets import QMessageBox
-from download import Download
+from PyQt5.QtWidgets import QMessageBox, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox, QPushButton, QTextEdit, QComboBox, QCalendarWidget
+from os import path
 from dateutil.parser import parse
 from datetime import date, datetime, timedelta
-from os import path
+from download import Download
 
 class Ui_Dialog(object):
     my_settings = QSettings("settings.ini", QSettings.IniFormat)
     dir = ""
+    
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(649, 463)
-        self.from_date = QtWidgets.QCalendarWidget(Dialog)
-        self.from_date.setGeometry(QtCore.QRect(30, 40, 310, 183))
-        self.from_date.setMinimumSize(QtCore.QSize(310, 183))
+        Dialog.resize(800, 600)
+
+        # Main vertical layout
+        main_layout = QVBoxLayout(Dialog)
+
+        # Date selection layout
+        date_layout = QHBoxLayout()
+        self.from_date = QCalendarWidget()
         self.from_date.setObjectName("from_date")
         self.from_date.clicked[QDate].connect(self.from_show_date)
+        date_layout.addWidget(self.from_date)
 
-        self.to_date = QtWidgets.QCalendarWidget(Dialog)
-        self.to_date.setGeometry(QtCore.QRect(350, 40, 310, 183))
+        self.to_date = QCalendarWidget()
         self.to_date.setObjectName("to_date")
         self.to_date.clicked[QDate].connect(self.to_show_date)
+        date_layout.addWidget(self.to_date)
 
-        self.nse_zipped = QtWidgets.QCheckBox(Dialog)
-        self.nse_zipped.setGeometry(QtCore.QRect(80, 240, 81, 17))
-        self.nse_zipped.setObjectName("nse_zipped")
+        main_layout.addLayout(date_layout)
 
-        self.headless = QtWidgets.QCheckBox(Dialog)
-        self.headless.setGeometry(QtCore.QRect(80, 260, 70, 17))
-        self.headless.setObjectName("headless")
+        # Labels for selected dates
+        from_date_label_layout = QHBoxLayout()
+        self.label = QLabel("From")
+        from_date_label_layout.addWidget(self.label)
+        self.from_date_label = QLabel("")
+        from_date_label_layout.addWidget(self.from_date_label)
 
-        self.dont_download_indices = QtWidgets.QCheckBox(Dialog)
-        self.dont_download_indices.setGeometry(QtCore.QRect(80, 280, 140, 17))
-        self.dont_download_indices.setObjectName("dont_download_indices")
+        to_date_label_layout = QHBoxLayout()
+        self.label_2 = QLabel("To")
+        to_date_label_layout.addWidget(self.label_2)
+        self.to_date_label = QLabel("")
+        to_date_label_layout.addWidget(self.to_date_label)
 
-        self.only_today = QtWidgets.QCheckBox(Dialog)
-        self.only_today.setGeometry(QtCore.QRect(470, 260, 81, 17))
-        self.only_today.setObjectName("only_today")
+        main_layout.addLayout(from_date_label_layout)
+        main_layout.addLayout(to_date_label_layout)
 
-        self.dont_download_bhavcopy = QtWidgets.QCheckBox(Dialog)
-        self.dont_download_bhavcopy.setGeometry(QtCore.QRect(260, 260, 180, 17))
-        self.dont_download_bhavcopy.setObjectName("dont_download_bhavcopy")
+        # Checkboxes layout
+        checkbox_layout = QVBoxLayout()
+        
+        self.nse_zipped = QCheckBox("Nse zipped?")
+        checkbox_layout.addWidget(self.nse_zipped)
 
-        self.bse_zipped = QtWidgets.QCheckBox(Dialog)
-        self.bse_zipped.setGeometry(QtCore.QRect(470, 240, 81, 16))
-        self.bse_zipped.setObjectName("bse_zipped")
+        self.bse_zipped = QCheckBox("Bse Zipped?")
+        checkbox_layout.addWidget(self.bse_zipped)
 
-        self.include_weekend = QtWidgets.QCheckBox(Dialog)
-        self.include_weekend.setGeometry(QtCore.QRect(260, 240, 131, 17))
-        self.include_weekend.setObjectName("include_weekend")
+        self.include_weekend = QCheckBox("Include Weekend")
+        checkbox_layout.addWidget(self.include_weekend)
 
-        self.label = QtWidgets.QLabel(Dialog)
-        self.label.setGeometry(QtCore.QRect(30, 12, 51, 21))
-        self.label.setObjectName("label")
+        self.headless = QCheckBox("Headless?")
+        checkbox_layout.addWidget(self.headless)
 
-        self.label_2 = QtWidgets.QLabel(Dialog)
-        self.label_2.setGeometry(QtCore.QRect(350, 12, 47, 21))
-        self.label_2.setObjectName("label_2")
+        self.dont_download_indices = QCheckBox("Don't download indices")
+        checkbox_layout.addWidget(self.dont_download_indices)
 
-        self.Submit = QtWidgets.QPushButton(Dialog)
-        self.Submit.setGeometry(QtCore.QRect(290, 310, 75, 23))
-        self.Submit.setObjectName("Submit")
-        self.Submit.clicked.connect(self.on_submit)
+        self.only_today = QCheckBox("Only Today?")
+        checkbox_layout.addWidget(self.only_today)
 
-        self.from_date_label = QtWidgets.QLabel(Dialog)
-        self.from_date_label.setGeometry(QtCore.QRect(80, 13, 81, 20))
-        self.from_date_label.setText("")
-        self.from_date_label.setObjectName("from_date_label")
+        self.dont_download_bhavcopy = QCheckBox("Don't download bhavcopy")
+        checkbox_layout.addWidget(self.dont_download_bhavcopy)
 
-        self.to_date_label = QtWidgets.QLabel(Dialog)
-        self.to_date_label.setGeometry(QtCore.QRect(380, 12, 151, 21))
-        self.to_date_label.setText("")
-        self.to_date_label.setObjectName("to_date_label")
+        main_layout.addLayout(checkbox_layout)
 
-        self.select_folder = QtWidgets.QPushButton(Dialog)
-        self.select_folder.setGeometry(QtCore.QRect(50, 310, 41, 23))
+        # Folder selection layout
+        folder_layout = QHBoxLayout()
+        self.select_folder = QPushButton("Select Folder")
         self.select_folder.setObjectName("select_folder")
         self.select_folder.clicked.connect(self.sel_folder)
+        folder_layout.addWidget(self.select_folder)
 
-        self.select_folder.setObjectName("select_folder")
-        self.label_3 = QtWidgets.QLabel(Dialog)
-        self.label_3.setGeometry(QtCore.QRect(10, 310, 31, 21))
-        self.label_3.setObjectName("label_3")
+        self.selected_folder_path = QTextEdit()
+        self.selected_folder_path.setMaximumHeight(40)
+        folder_layout.addWidget(self.selected_folder_path)
 
-        self.selected_folder_path = QtWidgets.QTextEdit(Dialog)
-        self.selected_folder_path.setGeometry(QtCore.QRect(92, 310, 191, 31))
-        self.selected_folder_path.setObjectName("selected_folder_path")
+        main_layout.addLayout(folder_layout)
 
-        self.IndicesSource = QtWidgets.QComboBox(Dialog)
-        self.IndicesSource.setGeometry(QtCore.QRect(260, 280, 90, 20))
-        self.IndicesSource.setObjectName("IndicesSource")
-        self.IndicesSource.addItem("")
-        self.IndicesSource.addItem("")
-        self.IndicesSource.addItem("")
+        # Indices source combo box
+        indices_layout = QHBoxLayout()
+        self.IndicesSource = QComboBox()
+        indices_layout.addWidget(self.IndicesSource)
+        self.IndicesSource.addItem("Nse")
+        self.IndicesSource.addItem("Moneycontrol")
+        self.IndicesSource.addItem("Nsepython")
+        self.IndicesSource.addItem("YahooFinance")
+
+        main_layout.addLayout(indices_layout)
+
+        # Submit button
+        self.Submit = QPushButton("Submit")
+        self.Submit.setObjectName("Submit")
+        self.Submit.clicked.connect(self.on_submit)
+        main_layout.addWidget(self.Submit)
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
+    def retranslateUi(self, Dialog):
+        _translate = QtCore.QCoreApplication.translate
+        Dialog.setWindowTitle(_translate("Dialog", "Stock Market Downloader"))
+
     def sel_folder(self):
         self.fileDialog = QtWidgets.QFileDialog()
-        self.fileDialog.setGeometry(QtCore.QRect(50, 310, 41, 23))
-        self.fileDialog.setObjectName("select 2 folder")
-        # directory only
         self.fileDialog.setFileMode(QtWidgets.QFileDialog.DirectoryOnly)
-        # just list mode is quite sufficient for choosing a diectory
         self.fileDialog.setViewMode(QtWidgets.QFileDialog.List)
-        # only want to to show directories
         self.fileDialog.setOption(QtWidgets.QFileDialog.ShowDirsOnly)
 
         if not self.fileDialog.exec_():
@@ -123,7 +121,9 @@ class Ui_Dialog(object):
         Ui_Dialog.dir = self.fileDialog.selectedFiles()[0]
         self.selected_folder_path.clear()
         self.selected_folder_path.insertPlainText(Ui_Dialog.dir)
+        # Save the selected folder path to settings
         Ui_Dialog.my_settings.setValue("save_folder_path", Ui_Dialog.dir)
+        Ui_Dialog.my_settings.sync()  # Ensure the setting is saved immediately
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
@@ -138,11 +138,12 @@ class Ui_Dialog(object):
         self.label.setText(_translate("Dialog", "From"))
         self.label_2.setText(_translate("Dialog", "To"))
         self.Submit.setText(_translate("Dialog", "Submit"))
-        self.select_folder.setText(_translate("Dialog", "Folder"))
-        self.label_3.setText(_translate("Dialog", "Select Folder"))
+        self.select_folder.setText(_translate("Dialog", "Select Folder"))  # Updated button text
         self.IndicesSource.setItemText(0, _translate("Dialog", "Nse"))
         self.IndicesSource.setItemText(1, _translate("Dialog", "Moneycontrol"))
         self.IndicesSource.setItemText(2, _translate("Dialog", "Nsepython"))
+        self.IndicesSource.setItemText(3, _translate("Dialog", "YahooFinance"))
+
 
     def from_show_date(self, date1):
         self.from_date_label.setText(date1.toString())
@@ -218,10 +219,10 @@ class Ui_Dialog(object):
         Ui_Dialog.my_settings.sync()
 
         d = Download(self.nse_zipped.isChecked(), self.nse_zipped.isChecked(),
-                     self.include_weekend.isChecked(), self.selected_folder_path.toPlainText(),
-                     self.headless.isChecked(), self.dont_download_indices.isChecked(),
-                     self.only_today.isChecked(), self.dont_download_bhavcopy.isChecked(),
-                     str(self.IndicesSource.currentText()))
+                        self.include_weekend.isChecked(), self.selected_folder_path.toPlainText(),
+                        self.headless.isChecked(), self.dont_download_indices.isChecked(),
+                        self.only_today.isChecked(), self.dont_download_bhavcopy.isChecked(),
+                        str(self.IndicesSource.currentText()))
 
         d.download_data(parse(self.from_date_label.text()).date(), parse(self.to_date_label.text()).date())
 
@@ -232,19 +233,19 @@ class Ui_Dialog(object):
             self.from_date_label.setText(parse(Ui_Dialog.my_settings.value("from_date")).strftime("%d-%b-%Y"))
             self.to_date_label.setText(parse(Ui_Dialog.my_settings.value("to_date")).strftime("%d-%b-%Y"))
 
-            Ui_Dialog.dir = Ui_Dialog.my_settings.value("save_folder_path")
-            self.selected_folder_path.insertPlainText(Ui_Dialog.dir)
+            Ui_Dialog.dir = Ui_Dialog.my_settings.value("save_folder_path", "")
+            self.selected_folder_path.setPlainText(Ui_Dialog.dir)
 
-            self.nse_zipped.setChecked(int(Ui_Dialog.my_settings.value("nse_zipped")))
+            self.nse_zipped.setChecked(int(Ui_Dialog.my_settings.value("nse_zipped", 0)))
 
-            self.bse_zipped.setChecked(int(Ui_Dialog.my_settings.value("bse_zipped")))
-            self.include_weekend.setChecked(int(Ui_Dialog.my_settings.value("include_weekend")))
+            self.bse_zipped.setChecked(int(Ui_Dialog.my_settings.value("bse_zipped", 0)))
+            self.include_weekend.setChecked(int(Ui_Dialog.my_settings.value("include_weekend", 0)))
 
-            self.headless.setChecked(int(Ui_Dialog.my_settings.value("headless")))
-            self.dont_download_indices.setChecked(int(Ui_Dialog.my_settings.value("dont_download_indices")))
-            self.dont_download_bhavcopy.setChecked(int(Ui_Dialog.my_settings.value("dont_download_bhavcopy")))
-            self.only_today.setChecked(int(Ui_Dialog.my_settings.value("only_today")))
-            self.IndicesSource.setCurrentIndex(int(Ui_Dialog.my_settings.value("indices_source")))
+            self.headless.setChecked(int(Ui_Dialog.my_settings.value("headless", 0)))
+            self.dont_download_indices.setChecked(int(Ui_Dialog.my_settings.value("dont_download_indices", 0)))
+            self.dont_download_bhavcopy.setChecked(int(Ui_Dialog.my_settings.value("dont_download_bhavcopy", 0)))
+            self.only_today.setChecked(int(Ui_Dialog.my_settings.value("only_today", 0)))
+            self.IndicesSource.setCurrentIndex(int(Ui_Dialog.my_settings.value("indices_source", 0)))
 
 
 if __name__ == "__main__":

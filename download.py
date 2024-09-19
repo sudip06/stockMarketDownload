@@ -22,6 +22,8 @@ from copy import deepcopy
 import sqlalchemy
 from models import Base, StockData, AdvDec
 from sqlalchemy.orm import sessionmaker
+import yfinance as yf
+
 MTO_NOT_NEEDED = True
 
 class Download:
@@ -149,10 +151,12 @@ class Download:
         if all(Download.is_weekend_holiday(x) for x in exact_dates):
             return
         from_date = date1
-        driver = Download.start_chrome(Download.headless)
-        driver.set_page_load_timeout(60000)
+        if Download.indices_source in ("Nse", "Moneycontrol"):
+            # broekn currently
+            driver = Download.start_chrome(Download.headless)
+            driver.set_page_load_timeout(60000)
         #driver.manage().timeouts().pageLoadTimeout(40, TimeUnit.SECONDS);
-        if Download.indices_source in ("Nse", "Nsepython"):
+        if Download.indices_source in ("Nse", "Nsepython", "YahooFinance"):
             indexes = [x.strip() for x in Download.NseDetails["IndexList"].split(",")]
         else: #for Moneycontrol
             index = [x.strip() for x in Download.NseDetails["MoneyControlIndex"].split(",")]
@@ -277,7 +281,7 @@ class Download:
                                              value[4] + "\n")
                 time.sleep(5)
             driver.quit()
-        else: #Nsepython
+        elif Download.indices_source == "Nsepython": #Nsepython
             from_date = date1.strftime('%d-%b-%Y')
             to_date = date2.strftime('%d-%b-%Y')
 
@@ -296,6 +300,46 @@ class Download:
                                              "," + x['LOW'][i] + "," +
                                              x['CLOSE'][i] + "\n")
                 time.sleep(2)
+        elif Download.indices_source == "YahooFinance": #YahooFinance
+            index_tickers = {
+                'NIFTY 50': '^NSEI',
+                'NIFTY AUTO': '^CNXAUTO',
+                'NIFTY BANK': '^NSEBANK',
+                'NIFTY FIN SERVICE': '^CNXFIN',
+                'NIFTY FMCG': '^CNXFMCG',
+                'NIFTY IT': '^CNXIT',
+                'NIFTY MEDIA': '^CNXMEDIA',
+                'NIFTY METAL': '^CNXMETAL',
+                'NIFTY PHARMA': '^CNXPHARMA',
+                'NIFTY PVT BANK': '^CNXPVTBANK',
+                'NIFTY PSU BANK': '^CNXPSUBANK',
+                'NIFTY REALTY': '^CNXREALTY'
+            }
+            #from_date = date1.strftime('%d-%b-%Y')
+            #to_date = date2.strftime('%d-%b-%Y')
+
+            from_date = date1
+            to_date = date2
+
+            # Fetch and write data
+            for index_name in indexes:
+                ticker = index_tickers.get(index_name)
+                if not ticker:
+                    print(f"Ticker not found for index: {index_name}")
+                    continue
+
+                # Fetch data from Yahoo Finance
+                data = yf.download(ticker, start=from_date, end=to_date + timedelta(days=1))  # end is exclusive
+
+                # Write data to CSV
+                for date, row in data.iterrows():
+                    file_name = f"{index_name.replace(' ', '_')}-{date.strftime('%d-%m-%Y')}-{date.strftime('%d-%m-%Y')}.csv"
+                    file_path = os.path.join(self.nse_root_directory, file_name)
+                    with open(file_path, "w") as index_file:
+                        index_file.write("Date,Open,High,Low,Close\n")
+                        index_file.write(f"{date.strftime('%d-%m-%Y')},{row['Open']},{row['High']},{row['Low']},{row['Close']}\n")
+                time.sleep(2)
+        
 
     def process_nse_data(self, date1):
         only_csv_file_name = "cm" + date1.strftime('%d%b%Y').upper() + "bhav.csv"
@@ -337,8 +381,10 @@ class Download:
             indexes = list(map(lambda x: x.split(":")[0], index))
         # driver.get('https://www.nseindia.com/products/content/equities/indices/historical_index_data.htm')
 
+        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX111 filename:{}".format(csv_file_name))
         # Read the 1st junk line in csv file
         with open(csv_file_name) as csvFileReader:
+            print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX filename:{}".format(csv_file_name))
             # write the 1st line in csvFileTemp file
             csv_del_file_writer.write("<ticker>,<date>,<open>,<high>,<low>,<close>,<volume>,<o/i>\n")
             csv_trade_file_writer.write("<ticker>,<date>,<open>,<high>,<low>,<close>,<volume>,<o/i>\n")
@@ -348,6 +394,7 @@ class Download:
                 # every_line = every_line[:-1]
                 stock_csv_data = [element.strip() for element in every_line.split(',')]
                 stock_name, stock_type, close_price, prev_price = itemgetter(0, 1, 8, 3)(every_line.split(','))
+                print("XXXXXXXXXXXXXXXXXX stock_name:{} stock_type:{}, close_price:{}, prev_price:{}".format(stock_name, stock_type, close_price, prev_price ))
                 if stock_type not in ('EQ','BE'):
                     continue
 
@@ -356,8 +403,8 @@ class Download:
                 else:
                     decline_num += 1
 
-                stock_data_regex = re.compile(stock_name + ",EQ,\d*,\d*")
                 if not MTO_NOT_NEEDED:
+                    stock_data_regex = re.compile(rf"{stock_name},EQ,\d*,\d*")
                     mto_data_filtered = re.search(stock_data_regex, mto_file_data, 0)
                     if not mto_data_filtered:
                         del_volume = str(int(int(stock_csv_data[8])*0.4))
@@ -405,6 +452,7 @@ class Download:
                     #sess.add(stock_obj)
                     stock_obj_list.append(stock_index_obj)
 
+                print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX index_file_data:{}".format(index_file_data))
                 if "NIFTY_50" in only_index_file_name:
                     nifty_file_data = deepcopy(index_file_data)
 
@@ -458,6 +506,8 @@ class Download:
             only_index_file_name = individualElements.replace(" ", "_") + "-" + \
                                    date1.strftime("%d-%m-%Y-%d-%m-%Y") + \
                                    ".csv"
+            if not os.path.exists(index_file_name):
+                    continue
             try:
                 os.replace(index_file_name, os.path.join(
                            self.nse_root_directory,
